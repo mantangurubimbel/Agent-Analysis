@@ -33,7 +33,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Baca localStorage SINKRON di initial state → tidak ada flicker
   const [theme, setThemeState] = React.useState<Theme>(getInitialTheme);
   const [resolvedTheme, setResolvedTheme] = React.useState<"light" | "dark">(() =>
-    resolveIsDark(getInitialTheme())
+    resolveIsDark(getInitialTheme()) ? "dark" : "light"
   );
 
   // Apply theme ke DOM setiap kali berubah
