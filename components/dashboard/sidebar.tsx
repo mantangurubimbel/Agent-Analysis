@@ -13,7 +13,7 @@ const navItems = [
   { href: "/dashboard/team", label: "Team Saya", icon: Users, roles: ["leader", "supervisor", "admin"] },
   { href: "/dashboard/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/dashboard/settings/users", label: "Manage Users", icon: UserCog, roles: ["admin"] },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings, roles: ["admin", "leader", "supervisor"] },
 ];
 
 export function Sidebar({ user }: { user: User }) {
