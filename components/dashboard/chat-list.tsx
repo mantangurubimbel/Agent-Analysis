@@ -16,16 +16,23 @@ const OUTCOME_FILTERS = [
   { value: "pending", label: "⏳ Pending" },
 ] as const;
 
+interface AgentOption {
+  id: number;
+  full_name: string;
+}
+
 interface ChatListProps {
   chats: ChatRecord[];
   searchFn?: (query: string) => Promise<ChatRecord[]>;
+  agents?: AgentOption[]; // daftar agent yang visible
 }
 
-export function ChatList({ chats, searchFn }: ChatListProps) {
+export function ChatList({ chats, searchFn, agents = [] }: ChatListProps) {
   const [search, setSearch] = useState("");
   const [outcome, setOutcome] = useState<string>("all");
   const [searchResults, setSearchResults] = useState<ChatRecord[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [agentFilter, setAgentFilter] = useState<string>("all");
 
   // Debounced search
   useEffect(() => {
@@ -55,19 +62,22 @@ export function ChatList({ chats, searchFn }: ChatListProps) {
 
   const filtered = baseData.filter((c) => {
     const matchOutcome = outcome === "all" || c.outcome === outcome;
-    // Kalau searchResults null, filter by search text di client
+    const matchAgent =
+      agentFilter === "all" || String(c.user_id) === agentFilter;
+
     if (searchResults !== null) {
-      return matchOutcome;
+      return matchOutcome && matchAgent;
     }
     const matchSearch =
       !search ||
       c.customer_name.toLowerCase().includes(search.toLowerCase()) ||
       c.agent_name.toLowerCase().includes(search.toLowerCase());
-    return matchSearch && matchOutcome;
+    return matchSearch && matchOutcome && matchAgent;
   });
 
   return (
     <div className="space-y-4">
+      {/* Filter */}
       {/* Filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -92,6 +102,22 @@ export function ChatList({ chats, searchFn }: ChatListProps) {
           )}
         </div>
 
+        {/* Dropdown Agent */}
+        {agents.length > 1 && (
+          <select
+            value={agentFilter}
+            onChange={(e) => setAgentFilter(e.target.value)}
+            className="px-3 py-2 text-sm rounded-md border bg-card hover:bg-muted whitespace-nowrap"
+          >
+            <option value="all">Semua Agent</option>
+            {agents.map((a) => (
+              <option key={a.id} value={String(a.id)}>
+                {a.full_name}
+              </option>
+            ))}
+          </select>
+        )}
+
         <div className="flex gap-2 overflow-x-auto pb-1">
           {OUTCOME_FILTERS.map((f) => (
             <button
@@ -109,6 +135,7 @@ export function ChatList({ chats, searchFn }: ChatListProps) {
         </div>
       </div>
 
+      
       {/* Search info */}
       {searchResults !== null && (
         <p className="text-xs text-muted-foreground">

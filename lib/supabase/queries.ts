@@ -1,11 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { getVisibleUserIds } from "@/lib/hierarchy";
 import type { ChatRecord, Transcript } from "@/types/database";
 
 export async function getChatsForCurrentUser(limit = 50): Promise<ChatRecord[]> {
   const supabase = await createClient();
   const user = await getCurrentUser();
   if (!user) return [];
+
+  // Ambil visible user IDs berdasarkan hierarki
+  const visibleIds = await getVisibleUserIds(user);
+  // visibleIds = [] → admin, lihat semua
 
   let query = supabase
     .from("chats")
@@ -14,17 +19,8 @@ export async function getChatsForCurrentUser(limit = 50): Promise<ChatRecord[]> 
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (user.role === "agent") {
-    query = query.eq("user_id", user.id);
-  } else if (user.role === "leader" && user.team) {
-    const { data: teamUsers } = await supabase
-      .from("users")
-      .select("id")
-      .eq("team", user.team);
-    const teamIds = (teamUsers ?? []).map((u) => u.id);
-    if (teamIds.length > 0) {
-      query = query.in("user_id", teamIds);
-    }
+  if (visibleIds.length > 0) {
+    query = query.in("user_id", visibleIds);
   }
 
   const { data, error } = await query;
@@ -137,17 +133,9 @@ export async function getLeaderboard(days = 30): Promise<LeaderboardEntry[]> {
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: false });
 
-  if (user.role === "agent") {
-    query = query.eq("user_id", user.id);
-  } else if (user.role === "leader" && user.team) {
-    const { data: teamUsers } = await supabase
-      .from("users")
-      .select("id")
-      .eq("team", user.team);
-    const teamIds = (teamUsers ?? []).map((u) => u.id);
-    if (teamIds.length > 0) {
-      query = query.in("user_id", teamIds);
-    }
+  const visibleIds = await getVisibleUserIds(user);
+  if (visibleIds.length > 0) {
+    query = query.in("user_id", visibleIds);
   }
 
   const { data: chats } = await query;
@@ -230,17 +218,9 @@ export async function getTrendData(days = 14): Promise<TrendPoint[]> {
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: true });
 
-  if (user.role === "agent") {
-    query = query.eq("user_id", user.id);
-  } else if (user.role === "leader" && user.team) {
-    const { data: teamUsers } = await supabase
-      .from("users")
-      .select("id")
-      .eq("team", user.team);
-    const teamIds = (teamUsers ?? []).map((u) => u.id);
-    if (teamIds.length > 0) {
-      query = query.in("user_id", teamIds);
-    }
+  const visibleIds = await getVisibleUserIds(user);
+  if (visibleIds.length > 0) {
+    query = query.in("user_id", visibleIds);
   }
 
   const { data: chats } = await query;
@@ -293,17 +273,9 @@ export async function getObjectionStats(days = 30): Promise<ObjectionStat[]> {
     .gte("created_at", since.toISOString())
     .not("analysis_json", "is", null);
 
-  if (user.role === "agent") {
-    query = query.eq("user_id", user.id);
-  } else if (user.role === "leader" && user.team) {
-    const { data: teamUsers } = await supabase
-      .from("users")
-      .select("id")
-      .eq("team", user.team);
-    const teamIds = (teamUsers ?? []).map((u) => u.id);
-    if (teamIds.length > 0) {
-      query = query.in("user_id", teamIds);
-    }
+  const visibleIds = await getVisibleUserIds(user);
+  if (visibleIds.length > 0) {
+    query = query.in("user_id", visibleIds);
   }
 
   const { data } = await query;
@@ -346,17 +318,9 @@ export async function searchChats(query: string, limit = 50): Promise<ChatRecord
     .limit(limit);
 
   // Filter role
-  if (user.role === "agent") {
-    q = q.eq("user_id", user.id);
-  } else if (user.role === "leader" && user.team) {
-    const { data: teamUsers } = await supabase
-      .from("users")
-      .select("id")
-      .eq("team", user.team);
-    const teamIds = (teamUsers ?? []).map((u) => u.id);
-    if (teamIds.length > 0) {
-      q = q.in("user_id", teamIds);
-    }
+  const visibleIds = await getVisibleUserIds(user);
+  if (visibleIds.length > 0) {
+    q = q.in("user_id", visibleIds);
   }
 
   const { data, error } = await q;
@@ -365,4 +329,88 @@ export async function searchChats(query: string, limit = 50): Promise<ChatRecord
     return [];
   }
   return (data ?? []) as ChatRecord[];
+}
+
+export interface AgentStats {
+  agent_id: number;
+  agent_name: string;
+  telegram_id: number | null;
+  total: number;
+  closed: number;
+  no_response: number;
+  rejected: number;
+  pending: number;
+  closing_rate: number;
+  avg_score: number;
+}
+
+export async function getAgentStatsForTeam(
+  agentIds: number[]
+): Promise<AgentStats[]> {
+  if (agentIds.length === 0) return [];
+
+  const supabase = await createClient();
+
+  // Ambil user info
+  const { data: users } = await supabase
+    .from("users")
+    .select("id, full_name, telegram_id")
+    .in("id", agentIds);
+
+  const userMap = new Map((users ?? []).map((u) => [u.id, u]));
+
+  // Ambil semua chat agent
+  const { data: chats } = await supabase
+    .from("chats")
+    .select("*")
+    .is("deleted_at", null)
+    .in("user_id", agentIds);
+
+  if (!chats) return [];
+
+  // Group by user_id
+  const byAgent = new Map<number, ChatRecord[]>();
+  for (const c of chats as ChatRecord[]) {
+    if (!byAgent.has(c.user_id)) byAgent.set(c.user_id, []);
+    byAgent.get(c.user_id)!.push(c);
+  }
+
+  // Hitung stats
+  const entries: AgentStats[] = [];
+  for (const agentId of agentIds) {
+    const recs = byAgent.get(agentId) ?? [];
+    const total = recs.length;
+    const closed = recs.filter((r) => r.outcome === "closed").length;
+    const no_response = recs.filter((r) => r.outcome === "no_response").length;
+    const rejected = recs.filter((r) => r.outcome === "rejected").length;
+    const pending = recs.filter((r) => r.outcome === "pending").length;
+
+    const scoredChats = recs.filter((r) => r.agent_score !== null);
+    const avg_score =
+      scoredChats.length > 0
+        ? scoredChats.reduce((s, r) => s + (r.agent_score ?? 0), 0) /
+          scoredChats.length
+        : 0;
+
+    const userInfo = userMap.get(agentId);
+    entries.push({
+      agent_id: agentId,
+      agent_name: userInfo?.full_name ?? "Unknown",
+      telegram_id: userInfo?.telegram_id ?? null,
+      total,
+      closed,
+      no_response,
+      rejected,
+      pending,
+      closing_rate: total > 0 ? Math.round((closed / total) * 100) : 0,
+      avg_score: Math.round(avg_score),
+    });
+  }
+
+  // Sort by closing rate
+  entries.sort(
+    (a, b) => b.closing_rate - a.closing_rate || b.avg_score - a.avg_score
+  );
+
+  return entries;
 }

@@ -10,6 +10,8 @@ import {
   Quote,
 } from "lucide-react";
 import { getChatById, getTranscript } from "@/lib/supabase/queries";
+import { createClient } from "@/lib/supabase/server";
+import { User } from "lucide-react";
 import { generateHighlights } from "@/lib/highlight";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OutcomeBadge } from "@/components/dashboard/outcome-badge";
@@ -41,6 +43,52 @@ export default async function ChatDetailPage({
   const analysis = parseJSON<ChatAnalysis>(chat.analysis_json);
   const coaching = parseJSON<CoachingRecommendation>(chat.coaching_json);
   const transcript = await getTranscript(id);
+
+    // Ambil info agent, leader, supervisor
+  const supabase = await createClient();
+  const { data: agentUser } = await supabase
+    .from("users")
+    .select("id, full_name, leader_id, supervisor_id")
+    .eq("id", chat.user_id)
+    .single();
+
+  let leaderName: string | null = null;
+  let supervisorName: string | null = null;
+
+  if (agentUser?.leader_id) {
+    const { data: leader } = await supabase
+      .from("users")
+      .select("full_name")
+      .eq("id", agentUser.leader_id)
+      .single();
+    leaderName = leader?.full_name ?? null;
+  }
+
+  if (agentUser?.supervisor_id) {
+    const { data: sup } = await supabase
+      .from("users")
+      .select("full_name")
+      .eq("id", agentUser.supervisor_id)
+      .single();
+    supervisorName = sup?.full_name ?? null;
+  } else if (agentUser?.leader_id) {
+    // Kalau agent tidak punya supervisor langsung, ambil dari leader
+    const { data: leader } = await supabase
+      .from("users")
+      .select("supervisor_id")
+      .eq("id", agentUser.leader_id)
+      .single();
+
+    if (leader?.supervisor_id) {
+      const { data: sup } = await supabase
+        .from("users")
+        .select("full_name")
+        .eq("id", leader.supervisor_id)
+        .single();
+      supervisorName = sup?.full_name ?? null;
+    }
+  }
+  
   const highlights = transcript
     ? generateHighlights(analysis, transcript.messages)
     : [];  
@@ -68,7 +116,20 @@ export default async function ChatDetailPage({
             {chat.customer_name}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Agent: {chat.agent_name} • {chat.total_messages} pesan •{" "}
+            Agent: <strong>{chat.agent_name}</strong>
+            {leaderName && (
+              <>
+                {" • "}Leader: <strong>{leaderName}</strong>
+              </>
+            )}
+            {supervisorName && (
+              <>
+                {" • "}Supervisor: <strong>{supervisorName}</strong>
+              </>
+            )}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {chat.total_messages} pesan •{" "}
             {new Date(chat.created_at).toLocaleString("id-ID")}
           </p>
         </div>

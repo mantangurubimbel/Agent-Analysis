@@ -9,6 +9,12 @@ export interface User {
   team: string | null;
   email?: string | null;
   created_at: string;
+  // === Batch 7A: Hierarki ===
+  supervisor_id?: number | null;
+  leader_id?: number | null;
+  is_active?: boolean;
+  deactivated_at?: string | null;
+  deactivated_reason?: string | null;
 }
 
 export type Outcome = "closed" | "no_response" | "rejected" | "pending" | "error" | null;
@@ -96,4 +102,10 @@ export interface ChatRecordWithStorage extends ChatRecord {
   file_hash?: string | null;
   transcript_json?: string | null;
   deleted_at?: string | null;
+}
+
+export interface TeamStructure {
+  agents: User[];
+  leaders: User[];
+  supervisors: User[];
 }
