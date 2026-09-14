@@ -1,5 +1,6 @@
 import { getChatsForCurrentUser } from "@/lib/supabase/queries";
 import { ChatList } from "@/components/dashboard/chat-list";
+import { searchChatsAction } from "./actions";
 
 export default async function ChatsPage() {
   const chats = await getChatsForCurrentUser(200);
@@ -12,7 +13,7 @@ export default async function ChatsPage() {
           {chats.length} percakapan dianalisis
         </p>
       </div>
-      <ChatList chats={chats} />
+      <ChatList chats={chats} searchFn={searchChatsAction} />
     </div>
   );
 }

@@ -28,6 +28,10 @@ export interface ChatRecord {
   coaching_json: string | null;
   source_file: string | null;
   created_at: string;
+  // Soft delete
+  deleted_at?: string | null;
+  deleted_by?: number | null;
+  delete_reason?: string | null;  
 }
 
 export interface ChatAnalysis {
@@ -59,4 +63,37 @@ export interface CoachingRecommendation {
     improved: string;
   }[];
   playbook_refs: string[];
+}
+
+// === Transcript types ===
+
+export type MessageSender = "agent" | "customer" | "unknown";
+
+export interface TranscriptMessage {
+  timestamp: string;
+  sender: MessageSender;
+  sender_name: string;
+  content: string;
+  is_media: boolean;
+}
+
+export interface Transcript {
+  chat_id: string;
+  agent_name: string;
+  customer_name: string;
+  start_time: string;
+  end_time: string;
+  total_messages: number;
+  source_file?: string | null;
+  messages: TranscriptMessage[];
+}
+
+// Update ChatRecord untuk tambah field storage
+export interface ChatRecordWithStorage extends ChatRecord {
+  storage_path_txt?: string | null;
+  storage_path_json?: string | null;
+  file_size?: number | null;
+  file_hash?: string | null;
+  transcript_json?: string | null;
+  deleted_at?: string | null;
 }

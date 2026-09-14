@@ -1,3 +1,4 @@
+import { DeleteChatDialog } from "@/components/dashboard/delete-chat-dialog";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -8,9 +9,11 @@ import {
   CheckCircle2,
   Quote,
 } from "lucide-react";
-import { getChatById } from "@/lib/supabase/queries";
+import { getChatById, getTranscript } from "@/lib/supabase/queries";
+import { generateHighlights } from "@/lib/highlight";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OutcomeBadge } from "@/components/dashboard/outcome-badge";
+import { TranscriptBubble } from "@/components/dashboard/transcript-bubble";
 import type {
   ChatAnalysis,
   CoachingRecommendation,
@@ -37,6 +40,10 @@ export default async function ChatDetailPage({
 
   const analysis = parseJSON<ChatAnalysis>(chat.analysis_json);
   const coaching = parseJSON<CoachingRecommendation>(chat.coaching_json);
+  const transcript = await getTranscript(id);
+  const highlights = transcript
+    ? generateHighlights(analysis, transcript.messages)
+    : [];  
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -48,21 +55,27 @@ export default async function ChatDetailPage({
         Kembali ke daftar chat
       </Link>
 
-      <div>
-        <div className="flex items-center gap-3 mb-2">
-          <OutcomeBadge outcome={chat.outcome} />
-          <span className="text-sm text-muted-foreground">
-            Chat ID:{" "}
-            <code className="text-xs">{chat.chat_id.slice(0, 12)}</code>
-          </span>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <OutcomeBadge outcome={chat.outcome} />
+            <span className="text-sm text-muted-foreground">
+              Chat ID:{" "}
+              <code className="text-xs">{chat.chat_id.slice(0, 12)}</code>
+            </span>
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {chat.customer_name}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Agent: {chat.agent_name} • {chat.total_messages} pesan •{" "}
+            {new Date(chat.created_at).toLocaleString("id-ID")}
+          </p>
         </div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          {chat.customer_name}
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Agent: {chat.agent_name} • {chat.total_messages} pesan •{" "}
-          {new Date(chat.created_at).toLocaleString("id-ID")}
-        </p>
+        <DeleteChatDialog
+          chatId={chat.chat_id}
+          customerName={chat.customer_name}
+        />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -91,6 +104,76 @@ export default async function ChatDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Transcript */}
+      {transcript && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              💬 Transcript Percakapan
+              <span className="text-xs font-normal text-muted-foreground">
+                ({transcript.total_messages} pesan)
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Legend */}
+            {highlights.length > 0 && (
+              <div className="flex flex-wrap gap-3 mb-3 pb-3 border-b text-xs">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-sm bg-emerald-500"></span>
+                  <span className="text-muted-foreground">Bagus</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-sm bg-amber-500"></span>
+                  <span className="text-muted-foreground">Objection</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-sm bg-rose-500"></span>
+                  <span className="text-muted-foreground">Perlu Improve</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-sm bg-blue-500"></span>
+                  <span className="text-muted-foreground">Momen Penting</span>
+                </span>
+                <span className="text-muted-foreground ml-auto">
+                  {highlights.length} highlight
+                </span>
+              </div>
+            )}
+
+            <div className="max-h-[600px] overflow-y-auto pr-2">
+              <TranscriptBubble
+                transcript={transcript}
+                highlights={highlights}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Key Moments */}
+      {analysis && analysis.key_moments && analysis.key_moments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg text-blue-600 dark:text-blue-400">
+              📌 Momen Penting
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ol className="space-y-2">
+              {analysis.key_moments.map((moment, i) => (
+                <li key={i} className="flex gap-3 text-sm">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 text-xs font-medium flex items-center justify-center">
+                    {i + 1}
+                  </span>
+                  <span className="leading-relaxed">{moment}</span>
+                </li>
+              ))}
+            </ol>
+          </CardContent>
+        </Card>
+      )}
 
       {chat.root_cause && (
         <Card className="border-l-4 border-l-primary">

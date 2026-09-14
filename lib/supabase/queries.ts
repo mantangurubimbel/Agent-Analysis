@@ -1,39 +1,62 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
-import type { ChatRecord } from "@/types/database";
+import type { ChatRecord, Transcript } from "@/types/database";
 
 export async function getChatsForCurrentUser(limit = 50): Promise<ChatRecord[]> {
   const supabase = await createClient();
   const user = await getCurrentUser();
   if (!user) return [];
 
-  let query = supabase.from("chats").select("*").order("created_at", { ascending: false }).limit(limit);
+  let query = supabase
+    .from("chats")
+    .select("*")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
 
   if (user.role === "agent") {
     query = query.eq("user_id", user.id);
   } else if (user.role === "leader" && user.team) {
-    const { data: teamUsers } = await supabase.from("users").select("id").eq("team", user.team);
+    const { data: teamUsers } = await supabase
+      .from("users")
+      .select("id")
+      .eq("team", user.team);
     const teamIds = (teamUsers ?? []).map((u) => u.id);
-    if (teamIds.length > 0) query = query.in("user_id", teamIds);
+    if (teamIds.length > 0) {
+      query = query.in("user_id", teamIds);
+    }
   }
 
   const { data, error } = await query;
-  if (error) { console.error("Error fetching chats:", error); return []; }
+  if (error) {
+    console.error("Error fetching chats:", error);
+    return [];
+  }
   return (data ?? []) as ChatRecord[];
 }
 
 export async function getStatsForCurrentUser() {
   const chats = await getChatsForCurrentUser(1000);
+
   const total = chats.length;
   const closed = chats.filter((c) => c.outcome === "closed").length;
   const noResponse = chats.filter((c) => c.outcome === "no_response").length;
   const rejected = chats.filter((c) => c.outcome === "rejected").length;
   const pending = chats.filter((c) => c.outcome === "pending").length;
+
   const scoredChats = chats.filter((c) => c.agent_score !== null);
-  const avgScore = scoredChats.length > 0 ? scoredChats.reduce((s, c) => s + (c.agent_score ?? 0), 0) / scoredChats.length : 0;
+  const avgScore =
+    scoredChats.length > 0
+      ? scoredChats.reduce((s, c) => s + (c.agent_score ?? 0), 0) /
+        scoredChats.length
+      : 0;
 
   return {
-    total, closed, noResponse, rejected, pending,
+    total,
+    closed,
+    noResponse,
+    rejected,
+    pending,
     closingRate: total > 0 ? Math.round((closed / total) * 100) : 0,
     avgScore: Math.round(avgScore),
   };
@@ -47,6 +70,7 @@ export async function getChatById(chatId: string): Promise<ChatRecord | null> {
   const { data, error } = await supabase
     .from("chats")
     .select("*")
+    .is("deleted_at", null)
     .eq("chat_id", chatId)
     .single();
 
@@ -55,7 +79,6 @@ export async function getChatById(chatId: string): Promise<ChatRecord | null> {
     return null;
   }
 
-  // Cek akses
   if (user.role === "agent" && data.user_id !== user.id) {
     return null;
   }
@@ -63,19 +86,27 @@ export async function getChatById(chatId: string): Promise<ChatRecord | null> {
   return data as ChatRecord;
 }
 
-export async function getTranscript(chatId: string): Promise<string> {
+export async function getTranscript(chatId: string): Promise<Transcript | null> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("chats")
-    .select("analysis_json")
+    .select("transcript_json")
     .eq("chat_id", chatId)
+    .is("deleted_at", null)
     .single();
 
-  // Transcript tidak disimpan di DB, hanya di file .txt asli
-  // Kita reconstruct dari analysis_json kalau ada
-  return "";
-}
+  if (error || !data?.transcript_json) {
+    console.error("Error fetching transcript:", error);
+    return null;
+  }
 
+  try {
+    return JSON.parse(data.transcript_json);
+  } catch (e) {
+    console.error("Error parsing transcript:", e);
+    return null;
+  }
+}
 
 export interface LeaderboardEntry {
   agent_id: number;
@@ -102,10 +133,10 @@ export async function getLeaderboard(days = 30): Promise<LeaderboardEntry[]> {
   let query = supabase
     .from("chats")
     .select("*")
+    .is("deleted_at", null)
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: false });
 
-  // Filter berdasarkan role
   if (user.role === "agent") {
     query = query.eq("user_id", user.id);
   } else if (user.role === "leader" && user.team) {
@@ -122,18 +153,17 @@ export async function getLeaderboard(days = 30): Promise<LeaderboardEntry[]> {
   const { data: chats } = await query;
   if (!chats || chats.length === 0) return [];
 
-  // Ambil semua user untuk mapping
-  const { data: users } = await supabase.from("users").select("id, full_name, team");
+  const { data: users } = await supabase
+    .from("users")
+    .select("id, full_name, team");
   const userMap = new Map((users ?? []).map((u) => [u.id, u]));
 
-  // Group by user_id
   const byAgent = new Map<number, ChatRecord[]>();
   for (const c of chats as ChatRecord[]) {
     if (!byAgent.has(c.user_id)) byAgent.set(c.user_id, []);
     byAgent.get(c.user_id)!.push(c);
   }
 
-  // Hitung stats per agent
   const entries: LeaderboardEntry[] = [];
   for (const [agentId, recs] of byAgent.entries()) {
     const total = recs.length;
@@ -172,8 +202,9 @@ export async function getLeaderboard(days = 30): Promise<LeaderboardEntry[]> {
     });
   }
 
-  // Sort by closing rate
-  entries.sort((a, b) => b.closing_rate - a.closing_rate || b.avg_score - a.avg_score);
+  entries.sort(
+    (a, b) => b.closing_rate - a.closing_rate || b.avg_score - a.avg_score
+  );
   return entries;
 }
 
@@ -195,6 +226,7 @@ export async function getTrendData(days = 14): Promise<TrendPoint[]> {
   let query = supabase
     .from("chats")
     .select("created_at, outcome")
+    .is("deleted_at", null)
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: true });
 
@@ -214,7 +246,6 @@ export async function getTrendData(days = 14): Promise<TrendPoint[]> {
   const { data: chats } = await query;
   if (!chats || chats.length === 0) return [];
 
-  // Group by date (YYYY-MM-DD)
   const byDate = new Map<string, { total: number; closed: number }>();
   for (const c of chats) {
     const date = new Date(c.created_at).toISOString().slice(0, 10);
@@ -224,7 +255,6 @@ export async function getTrendData(days = 14): Promise<TrendPoint[]> {
     if (c.outcome === "closed") entry.closed++;
   }
 
-  // Build trend array
   const result: TrendPoint[] = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date();
@@ -259,6 +289,7 @@ export async function getObjectionStats(days = 30): Promise<ObjectionStat[]> {
   let query = supabase
     .from("chats")
     .select("analysis_json")
+    .is("deleted_at", null)
     .gte("created_at", since.toISOString())
     .not("analysis_json", "is", null);
 
@@ -278,7 +309,6 @@ export async function getObjectionStats(days = 30): Promise<ObjectionStat[]> {
   const { data } = await query;
   if (!data) return [];
 
-  // Count objections per type
   const counts: Record<string, number> = {};
   for (const row of data) {
     try {
@@ -292,4 +322,47 @@ export async function getObjectionStats(days = 30): Promise<ObjectionStat[]> {
   return Object.entries(counts)
     .map(([type, count]) => ({ type, count }))
     .sort((a, b) => b.count - a.count);
+}
+
+export async function searchChats(query: string, limit = 50): Promise<ChatRecord[]> {
+  if (!query || query.trim().length < 2) {
+    return [];
+  }
+
+  const supabase = await createClient();
+  const user = await getCurrentUser();
+  if (!user) return [];
+
+  // Postgres FTS: gunakan plainto_tsquery untuk natural language
+  let q = supabase
+    .from("chats")
+    .select("*")
+    .is("deleted_at", null)
+    .textSearch("search_vector", query, {
+      type: "plain",
+      config: "simple",
+    })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  // Filter role
+  if (user.role === "agent") {
+    q = q.eq("user_id", user.id);
+  } else if (user.role === "leader" && user.team) {
+    const { data: teamUsers } = await supabase
+      .from("users")
+      .select("id")
+      .eq("team", user.team);
+    const teamIds = (teamUsers ?? []).map((u) => u.id);
+    if (teamIds.length > 0) {
+      q = q.in("user_id", teamIds);
+    }
+  }
+
+  const { data, error } = await q;
+  if (error) {
+    console.error("Error searching chats:", error);
+    return [];
+  }
+  return (data ?? []) as ChatRecord[];
 }

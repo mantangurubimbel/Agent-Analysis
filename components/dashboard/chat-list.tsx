@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, ChevronRight } from "lucide-react";
+import { Search, ChevronRight, X, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { OutcomeBadge } from "@/components/dashboard/outcome-badge";
@@ -16,33 +16,82 @@ const OUTCOME_FILTERS = [
   { value: "pending", label: "⏳ Pending" },
 ] as const;
 
-export function ChatList({ chats }: { chats: ChatRecord[] }) {
+interface ChatListProps {
+  chats: ChatRecord[];
+  searchFn?: (query: string) => Promise<ChatRecord[]>;
+}
+
+export function ChatList({ chats, searchFn }: ChatListProps) {
   const [search, setSearch] = useState("");
   const [outcome, setOutcome] = useState<string>("all");
+  const [searchResults, setSearchResults] = useState<ChatRecord[] | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const filtered = useMemo(() => {
-    return chats.filter((c) => {
-      const matchSearch =
-        !search ||
-        c.customer_name.toLowerCase().includes(search.toLowerCase()) ||
-        c.agent_name.toLowerCase().includes(search.toLowerCase());
-      const matchOutcome = outcome === "all" || c.outcome === outcome;
-      return matchSearch && matchOutcome;
-    });
-  }, [chats, search, outcome]);
+  // Debounced search
+  useEffect(() => {
+    if (!searchFn || !search || search.trim().length < 2) {
+      setSearchResults(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const results = await searchFn(search);
+        setSearchResults(results);
+      } catch (e) {
+        console.error("Search error:", e);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [search, searchFn]);
+
+  // Data yang ditampilkan: hasil search atau data awal
+  const baseData = searchResults ?? chats;
+
+  const filtered = baseData.filter((c) => {
+    const matchOutcome = outcome === "all" || c.outcome === outcome;
+    // Kalau searchResults null, filter by search text di client
+    if (searchResults !== null) {
+      return matchOutcome;
+    }
+    const matchSearch =
+      !search ||
+      c.customer_name.toLowerCase().includes(search.toLowerCase()) ||
+      c.agent_name.toLowerCase().includes(search.toLowerCase());
+    return matchSearch && matchOutcome;
+  });
 
   return (
     <div className="space-y-4">
+      {/* Filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Cari customer atau agent..."
+            placeholder="Cari customer, agent, atau isi percakapan..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 pr-9"
           />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {isSearching ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <X className="w-4 h-4" />
+              )}
+            </button>
+          )}
         </div>
+
         <div className="flex gap-2 overflow-x-auto pb-1">
           {OUTCOME_FILTERS.map((f) => (
             <button
@@ -60,11 +109,22 @@ export function ChatList({ chats }: { chats: ChatRecord[] }) {
         </div>
       </div>
 
+      {/* Search info */}
+      {searchResults !== null && (
+        <p className="text-xs text-muted-foreground">
+          🔍 Ditemukan <strong>{searchResults.length}</strong> chat untuk
+          pencarian &ldquo;{search}&rdquo;
+        </p>
+      )}
+
+      {/* List */}
       {filtered.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
             <p className="text-muted-foreground">
-              {chats.length === 0
+              {searchResults !== null
+                ? `Tidak ada chat yang cocok dengan "${search}".`
+                : chats.length === 0
                 ? "Belum ada chat. Upload via Telegram bot untuk memulai."
                 : "Tidak ada chat yang cocok dengan filter."}
             </p>
@@ -111,7 +171,7 @@ export function ChatList({ chats }: { chats: ChatRecord[] }) {
       )}
 
       <p className="text-xs text-muted-foreground text-center">
-        Menampilkan {filtered.length} dari {chats.length} chat
+        Menampilkan {filtered.length} dari {baseData.length} chat
       </p>
     </div>
   );
