@@ -232,7 +232,7 @@ export function UserFormDialog({ mode, user, allUsers }: UserFormDialogProps) {
               <Label htmlFor="leader_id">Leader</Label>
               <Select
                 value={leaderId || "__none__"}
-                onValueChange={(v) => setLeaderId(v === "__none__" ? "" : v)}
+                onValueChange={(v) => setLeaderId(v === "__none__" || v === null ? "" : v)}
               >
                 <SelectTrigger id="leader_id">
                   <SelectValue placeholder="Pilih leader" />
@@ -256,7 +256,7 @@ export function UserFormDialog({ mode, user, allUsers }: UserFormDialogProps) {
               <Select
                 value={supervisorId || "__none__"}
                 onValueChange={(v) =>
-                  setSupervisorId(v === "__none__" ? "" : v)
+                  setSupervisorId(v === "__none__" || v === null ? "" : v)
                 }
               >
                 <SelectTrigger id="supervisor_id">
