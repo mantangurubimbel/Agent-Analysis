@@ -32,17 +32,35 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith(path)
   );
 
+  // 1. Belum login & bukan di halaman publik → redirect ke /login
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
+  // 2. Sudah login & buka /login → cek apakah email terdaftar di public.users
+  //    Kalau TIDAK terdaftar → biarkan di /login (jangan redirect ke dashboard)
+  //    Kalau terdaftar → redirect ke /dashboard
   if (user && request.nextUrl.pathname === "/login") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+    // Cek apakah email user ada di public.users
+    const { data: dbUser } = await supabase
+      .from("users")
+      .select("id")
+      .ilike("email", user.email ?? "")
+      .eq("is_active", true)
+      .maybeSingle();
+
+    // Hanya redirect kalau user terdaftar
+    if (dbUser) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+    // Kalau tidak terdaftar, biarkan di /login
+    return supabaseResponse;
   }
 
+  // 3. Sudah login & buka halaman dashboard → biarkan (layout akan cek DB)
   return supabaseResponse;
 }
