@@ -81,13 +81,32 @@ export async function POST(request: Request) {
       .select("id")
       .eq("telegram_id", telegram_id)
       .neq("id", user.id)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return NextResponse.json(
         { error: "Telegram ID sudah dipakai user lain" },
         { status: 400 }
       );
+    }
+  }
+
+  // Validasi email unik (case-insensitive)
+  if (email && email.trim()) {
+    const { data: existingEmail } = await supabase
+      .from("users")
+      .select("id, full_name")
+      .ilike("email", email.trim())
+      .neq("id", user.id)
+      .maybeSingle();
+
+    if (existingEmail) {
+      return NextResponse.json(
+        {
+          error: `Email sudah dipakai oleh ${existingEmail.full_name}`,
+        },
+        { status: 400 }
+        );
     }
   }
 

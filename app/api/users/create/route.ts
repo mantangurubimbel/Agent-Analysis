@@ -45,6 +45,24 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validasi email unik (case-insensitive)
+    if (email && email.trim()) {
+      const { data: existingEmail } = await supabase
+        .from("users")
+        .select("id, full_name")
+        .ilike("email", email.trim())
+        .maybeSingle();
+
+      if (existingEmail) {
+        return NextResponse.json(
+          {
+            error: `Email sudah dipakai oleh ${existingEmail.full_name}`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Insert
     const { data, error } = await supabase
       .from("users")

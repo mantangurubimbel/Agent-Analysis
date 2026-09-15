@@ -38,6 +38,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Validasi email unik (case-insensitive)
+    if (email && email.trim()) {
+      const { data: existingEmail } = await supabase
+        .from("users")
+        .select("id, full_name")
+        .ilike("email", email.trim())
+        .neq("id", id)
+        .maybeSingle();
+
+      if (existingEmail) {
+        return NextResponse.json(
+          {
+            error: `Email sudah dipakai oleh ${existingEmail.full_name}`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+    
     // Update
     const { data, error } = await supabase
       .from("users")

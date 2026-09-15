@@ -7,14 +7,31 @@ export async function getCurrentUser(): Promise<User | null> {
     data: { user: authUser },
   } = await supabase.auth.getUser();
 
-  if (!authUser?.email) return null;
+  if (!authUser?.email) {
+    console.log("[AUTH] No auth user");
+    return null;
+  }
 
-  const { data: dbUser } = await supabase
+  console.log("[AUTH] Auth email:", authUser.email);
+
+  const { data: dbUser, error } = await supabase
     .from("users")
     .select("*")
-    .eq("email", authUser.email)
-    .single();
+    .ilike("email", authUser.email)
+    .eq("is_active", true)
+    .maybeSingle();
 
+  if (error) {
+    console.log("[AUTH] Query error:", error.message);
+    return null;
+  }
+
+  if (!dbUser) {
+    console.log("[AUTH] User not found in DB:", authUser.email);
+    return null;
+  }
+
+  console.log("[AUTH] User found:", dbUser.full_name, "role:", dbUser.role);
   return dbUser as User | null;
 }
 
