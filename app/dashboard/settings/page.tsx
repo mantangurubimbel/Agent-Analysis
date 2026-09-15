@@ -14,8 +14,10 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+          Settings
+        </h1>
+        <p className="text-sm text-[var(--text-muted)] mt-1.5">
           Konfigurasi sistem & profil
         </p>
       </div>

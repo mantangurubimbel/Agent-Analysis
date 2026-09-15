@@ -21,14 +21,19 @@ export default async function DashboardLayout({
   if (!user) redirect("/login?error=user_not_registered");
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-[var(--bg-main)]">
       <Sidebar user={user} />
-      <div className="flex-1 flex flex-col">
-        <header className="h-16 border-b bg-card flex items-center justify-end px-6 gap-2 sticky top-0 z-10">
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="h-14 border-b border-[var(--border)] bg-[var(--bg-main)] flex items-center justify-end px-5 gap-1 sticky top-0 z-40">
           <ThemeToggle />
           <UserMenu email={authUser.email ?? ""} />
         </header>
-        <main className="flex-1 p-6">{children}</main>
+
+        {/* Main Content */}
+        <main className="flex-1">
+          <div className="max-w-7xl mx-auto p-6 lg:p-8">{children}</div>
+        </main>
       </div>
     </div>
   );

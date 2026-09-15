@@ -25,18 +25,23 @@ export function UserMenu({ email }: { email: string }) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="inline-flex items-center justify-center h-10 w-10 rounded-full hover:bg-muted transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <DropdownMenuTrigger className="inline-flex items-center justify-center h-9 w-9 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">
         <UserIcon className="w-5 h-5" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="font-normal">
-            <div className="text-xs text-muted-foreground">Masuk sebagai</div>
-            <div className="text-sm font-medium truncate">{email}</div>
+            <div className="text-xs text-[var(--text-muted)]">
+              Masuk sebagai
+            </div>
+            <div className="text-sm font-medium truncate mt-0.5">{email}</div>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+        <DropdownMenuItem
+          onClick={handleLogout}
+          className="cursor-pointer text-rose-600 focus:text-rose-600"
+        >
           <LogOut className="w-4 h-4 mr-2" />
           Keluar
         </DropdownMenuItem>

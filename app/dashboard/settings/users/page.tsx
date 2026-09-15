@@ -24,17 +24,20 @@ export default async function ManageUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Manage Users</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+            Manage Users
+          </h1>
+          <p className="text-sm text-[var(--text-muted)] mt-1.5">
             Kelola struktur tim: {allUsers.length} user terdaftar
           </p>
         </div>
         <UserFormDialog mode="create" allUsers={allUsers} />
       </div>
 
-      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 text-sm text-[var(--text-muted)]">
         <span>👑 Admin</span>
         <span>🔍 Supervisor</span>
         <span>🎯 Leader</span>

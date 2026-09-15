@@ -69,7 +69,7 @@ export function TeamOverview({
       {/* Leaders List (kalau supervisor/admin) */}
       {structure.leaders.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold mb-3">
+          <h2 className="text-lg font-semibold mb-3 text-[var(--text-primary)]">
             🎯 Leader ({structure.leaders.length})
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -82,7 +82,7 @@ export function TeamOverview({
 
       {/* Agents List */}
       <div>
-        <h2 className="text-lg font-semibold mb-3">
+        <h2 className="text-lg font-semibold mb-3 text-[var(--text-primary)]">
           👥 Agent ({structure.agents.length})
         </h2>
         {agentStats.length === 0 ? (
@@ -117,33 +117,41 @@ function StatCard({
   highlight?: boolean;
 }) {
   return (
-    <Card className={highlight ? "border-primary/50 bg-accent" : ""}>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-muted-foreground">{title}</span>
-          <span className="text-muted-foreground">{icon}</span>
-        </div>
-        <div className="text-3xl font-bold">{value}</div>
-        {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
-        )}
-      </CardContent>
-    </Card>
+    <div
+      className={`rounded-lg border bg-[var(--surface)] p-6 transition-colors ${
+        highlight
+          ? "border-[var(--accent)]/30 bg-[var(--accent-subtle)]/30"
+          : "border-[var(--border)]"
+      }`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium text-[var(--text-secondary)]">
+          {title}
+        </span>
+        <span className="text-[var(--text-muted)]">{icon}</span>
+      </div>
+      <div className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+        {value}
+      </div>
+      {description && (
+        <p className="text-xs text-[var(--text-muted)] mt-2">{description}</p>
+      )}
+    </div>
   );
 }
 
 function LeaderCard({ leader }: { leader: User }) {
   return (
-    <Card>
-      <CardContent className="p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
-          🎯
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 flex items-center gap-3">
+      <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center shrink-0">
+        🎯
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="font-medium text-[var(--text-primary)] truncate">
+          {leader.full_name}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-medium truncate">{leader.full_name}</div>
-          <div className="text-xs text-muted-foreground">Leader</div>
-        </div>
-      </CardContent>
-    </Card>
+        <div className="text-xs text-[var(--text-muted)]">Leader</div>
+      </div>
+    </div>
   );
 }

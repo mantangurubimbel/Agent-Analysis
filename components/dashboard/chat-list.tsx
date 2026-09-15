@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { OutcomeBadge } from "@/components/dashboard/outcome-badge";
 import type { ChatRecord } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 const OUTCOME_FILTERS = [
   { value: "all", label: "Semua" },
@@ -81,12 +82,12 @@ export function ChatList({ chats, searchFn, agents = [] }: ChatListProps) {
       {/* Filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
           <Input
             placeholder="Cari customer, agent, atau isi percakapan..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 pr-9"
+            className="pl-9 pr-9 bg-[var(--surface)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
           />
           {search && (
             <button
@@ -107,7 +108,7 @@ export function ChatList({ chats, searchFn, agents = [] }: ChatListProps) {
           <select
             value={agentFilter}
             onChange={(e) => setAgentFilter(e.target.value)}
-            className="px-3 py-2 text-sm rounded-md border bg-card hover:bg-muted whitespace-nowrap"
+            className="px-3 py-2 text-sm rounded-md border bg-[var(--surface)] border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] whitespace-nowrap"
           >
             <option value="all">Semua Agent</option>
             {agents.map((a) => (
@@ -123,11 +124,12 @@ export function ChatList({ chats, searchFn, agents = [] }: ChatListProps) {
             <button
               key={f.value}
               onClick={() => setOutcome(f.value)}
-              className={`px-3 py-2 text-sm rounded-md border whitespace-nowrap transition-colors ${
+              className={cn(
+                "px-3 py-1.5 text-sm rounded-md border whitespace-nowrap transition-colors",
                 outcome === f.value
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-card hover:bg-muted"
-              }`}
+                  ? "bg-[var(--accent)] text-white border-[var(--accent)]"
+                  : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+              )}
             >
               {f.label}
             </button>

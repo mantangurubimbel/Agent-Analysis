@@ -64,10 +64,21 @@ export function OutcomeChart({
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "var(--surface)",
+                  backgroundColor: "var(--surface-elevated)",
                   border: "1px solid var(--border)",
                   borderRadius: "8px",
                   fontSize: "12px",
+                  color: "var(--text-primary)",
+                  padding: "8px 12px",
+                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                }}
+                labelStyle={{
+                  color: "var(--text-primary)",
+                  fontWeight: 600,
+                  marginBottom: "4px",
+                }}
+                itemStyle={{
+                  color: "var(--text-secondary)",
                 }}
               />
               <Legend

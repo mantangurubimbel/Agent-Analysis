@@ -97,7 +97,7 @@ export default async function ChatDetailPage({
     <div className="space-y-6 max-w-5xl mx-auto">
       <Link
         href="/dashboard/chats"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Kembali ke daftar chat
@@ -105,31 +105,26 @@ export default async function ChatDetailPage({
 
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-2 mb-2">
             <OutcomeBadge outcome={chat.outcome} />
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs text-[var(--text-muted)]">
               Chat ID:{" "}
-              <code className="text-xs">{chat.chat_id.slice(0, 12)}</code>
+              <code className="font-mono text-[var(--text-secondary)]">
+                {chat.chat_id.slice(0, 12)}
+              </code>
             </span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
             {chat.customer_name}
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Agent: <strong>{chat.agent_name}</strong>
-            {leaderName && (
-              <>
-                {" • "}Leader: <strong>{leaderName}</strong>
-              </>
-            )}
-            {supervisorName && (
-              <>
-                {" • "}Supervisor: <strong>{supervisorName}</strong>
-              </>
-            )}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {chat.total_messages} pesan •{" "}
+          <p className="text-sm text-[var(--text-muted)] mt-1.5">
+            Agent:{" "}
+            <span className="text-[var(--text-secondary)] font-medium">
+              {chat.agent_name}
+            </span>
+            {" • "}
+            {chat.total_messages} pesan
+            {" • "}
             {new Date(chat.created_at).toLocaleString("id-ID")}
           </p>
         </div>

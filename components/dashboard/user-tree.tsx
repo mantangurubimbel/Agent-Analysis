@@ -14,10 +14,13 @@ const roleEmoji = {
 };
 
 const roleColor = {
-  admin: "bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300",
-  supervisor: "bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300",
-  leader: "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300",
-  agent: "bg-muted text-muted-foreground",
+  admin:
+    "bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300",
+  supervisor:
+    "bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300",
+  leader:
+    "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300",
+  agent: "bg-[var(--bg-secondary)] text-[var(--text-muted)]",
 };
 
 export function UserTree({ users }: { users: User[] }) {
@@ -208,8 +211,12 @@ function UserRow({
   const hasSubs = subCount > 0;
 
   return (
-    <Card className={isInactive ? "opacity-60" : ""}>
-      <CardContent className="p-3">
+    <div
+      className={`rounded-lg border border-[var(--border)] bg-[var(--surface)] ${
+        isInactive ? "opacity-60" : ""
+      }`}
+    >
+      <div className="p-3">
         <div className="flex items-center gap-3">
           <button
             onClick={onToggle}
@@ -240,7 +247,7 @@ function UserRow({
                 </span>
               )}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-[var(--text-muted)]">
               {user.role} {hasSubs && `• ${subCount} subordinat`}
               {user.telegram_id > 0 && ` • TG: ${user.telegram_id}`}
             </div>
@@ -256,8 +263,8 @@ function UserRow({
 
           <UserFormDialog mode="edit" user={user} allUsers={users} />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
