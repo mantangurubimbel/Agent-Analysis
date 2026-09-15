@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
@@ -20,6 +21,18 @@ export const metadata: Metadata = {
   description: "Analisis percakapan sales WhatsApp",
 };
 
+// Script untuk mencegah flash of wrong theme
+const themeInitScript = `
+(function() {
+  try {
+    var theme = localStorage.getItem('theme') || 'system';
+    var isDark = theme === 'dark' || 
+      (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,20 +41,10 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
-        {/* Script untuk mencegah flash of wrong theme */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var theme = localStorage.getItem('theme') || 'system';
-                  var isDark = theme === 'dark' || 
-                    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-                  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-                } catch (e) {}
-              })();
-            `,
-          }}
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
       </head>
       <body

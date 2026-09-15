@@ -13,6 +13,7 @@ import {
   BarChart3,
   Users,
   UserCog,
+  Megaphone,
 } from "lucide-react";
 
 interface NavItem {
@@ -38,6 +39,17 @@ const navGroups: NavGroup[] = [
         label: "Team Saya",
         icon: Users,
         roles: ["leader", "supervisor", "admin"],
+      },
+    ],
+  },
+  {
+    title: "Komunikasi",
+    items: [
+      {
+        href: "/dashboard/broadcast",
+        label: "Broadcast",
+        icon: Megaphone,
+        roles: ["admin", "supervisor"],
       },
     ],
   },
