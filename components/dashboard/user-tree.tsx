@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, UserCheck, UserX } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserFormDialog } from "./user-form-dialog";
+import { ActiveToggle } from "./active-toggle";
 import type { User } from "@/types/database";
 
 const roleEmoji = {
@@ -204,7 +205,8 @@ function UserRow({
   onToggle: () => void;
 }) {
   const emoji = roleEmoji[user.role as keyof typeof roleEmoji] ?? "👤";
-  const colorClass = roleColor[user.role as keyof typeof roleColor] ?? "bg-muted";
+  const colorClass =
+    roleColor[user.role as keyof typeof roleColor] ?? "bg-muted";
   const isInactive = user.is_active === false;
 
   const subCount = getSubordinateCount(user, users);
@@ -220,7 +222,7 @@ function UserRow({
         <div className="flex items-center gap-3">
           <button
             onClick={onToggle}
-            className={`w-6 h-6 flex items-center justify-center rounded hover:bg-muted ${
+            className={`w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--bg-secondary)] ${
               hasSubs ? "" : "invisible"
             }`}
             disabled={!hasSubs}
@@ -240,7 +242,9 @@ function UserRow({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-medium truncate">{user.full_name}</span>
+              <span className="font-medium truncate text-[var(--text-primary)]">
+                {user.full_name}
+              </span>
               {isInactive && (
                 <span className="text-xs px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300">
                   Inactive
@@ -253,20 +257,21 @@ function UserRow({
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            {isInactive ? (
-              <UserX className="w-4 h-4 text-rose-500" />
-            ) : (
-              <UserCheck className="w-4 h-4 text-emerald-500" />
-            )}
-          </div>
+          {/* Toggle Active */}
+          <ActiveToggle
+            userId={user.id}
+            userName={user.full_name}
+            isActive={user.is_active !== false}
+          />
 
+          {/* Edit */}
           <UserFormDialog mode="edit" user={user} allUsers={users} />
         </div>
       </div>
     </div>
   );
 }
+
 
 function getSubordinateCount(user: User, users: User[]): number {
   if (user.role === "supervisor") {

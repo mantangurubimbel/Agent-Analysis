@@ -26,41 +26,77 @@ export async function updateSession(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
+  const pathname = request.nextUrl.pathname;
 
-  const publicPaths = ["/login", "/auth"];
+  // === PRIORITY 1: Public paths — SELALU IZINKAN ===
+  const publicPaths = ["/login", "/auth", "/maintenance"];
   const isPublicPath = publicPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
+    pathname.startsWith(path)
   );
 
-  // 1. Belum login & bukan di halaman publik → redirect ke /login
-  if (!user && !isPublicPath) {
+  if (isPublicPath) {
+    if (pathname === "/login" && user) {
+      const { data: dbUser } = await supabase
+        .from("users")
+        .select("role")
+        .ilike("email", user.email ?? "")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      const { data: mode } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "app.maintenance_mode")
+        .maybeSingle();
+      const maintenanceMode = mode?.value === "true";
+
+      const isAdmin = dbUser?.role === "admin";
+
+      if (dbUser && (!maintenanceMode || isAdmin)) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        return NextResponse.redirect(url);
+      }
+    }
+    return supabaseResponse;
+  }
+
+  // === PRIORITY 2: Belum login & bukan public → redirect ke /login ===
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  // 2. Sudah login & buka /login → cek apakah email terdaftar di public.users
-  //    Kalau TIDAK terdaftar → biarkan di /login (jangan redirect ke dashboard)
-  //    Kalau terdaftar → redirect ke /dashboard
-  if (user && request.nextUrl.pathname === "/login") {
-    // Cek apakah email user ada di public.users
-    const { data: dbUser } = await supabase
-      .from("users")
-      .select("id")
-      .ilike("email", user.email ?? "")
-      .eq("is_active", true)
-      .maybeSingle();
+  // === PRIORITY 3: Sudah login & protected path → cek user & maintenance ===
+  const { data: dbUser } = await supabase
+    .from("users")
+    .select("role")
+    .ilike("email", user.email ?? "")
+    .eq("is_active", true)
+    .maybeSingle();
 
-    // Hanya redirect kalau user terdaftar
-    if (dbUser) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
-      return NextResponse.redirect(url);
-    }
-    // Kalau tidak terdaftar, biarkan di /login
-    return supabaseResponse;
+  if (!dbUser) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("error", "user_not_registered");
+    return NextResponse.redirect(url);
   }
 
-  // 3. Sudah login & buka halaman dashboard → biarkan (layout akan cek DB)
+  const { data: mode } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "app.maintenance_mode")
+    .maybeSingle();
+
+  const maintenanceMode = mode?.value === "true";
+  const isAdmin = dbUser.role === "admin";
+
+  if (maintenanceMode && !isAdmin) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/maintenance";
+    return NextResponse.redirect(url);
+  }
+
   return supabaseResponse;
 }

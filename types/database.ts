@@ -109,3 +109,14 @@ export interface TeamStructure {
   leaders: User[];
   supervisors: User[];
 }
+
+/**
+ * Deteksi apakah chat fail analisis.
+ */
+export function isChatFailed(chat: ChatRecord): boolean {
+  return (
+    chat.outcome === "error" ||
+    (!chat.outcome && !chat.analysis_json) ||
+    (chat.agent_score === 0 && !chat.root_cause)
+  );
+}

@@ -42,6 +42,7 @@ export default async function ChatsPage() {
         chats={chats}
         searchFn={searchChatsAction}
         agents={agents ?? []}
+        userRole={user.role}
       />
     </div>
   );
