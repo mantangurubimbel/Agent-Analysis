@@ -42,7 +42,36 @@ export async function POST(request: Request) {
         notes: "Reactivated via dashboard",
       });
 
-      return NextResponse.json({ success: true, action: "reactivated" });
+      // === Notif ke user via Telegram ===
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (botToken && targetUser.telegram_id > 0) {
+        try {
+          await fetch(
+            `https://api.telegram.org/bot${botToken}/sendMessage`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: targetUser.telegram_id,
+                text:
+                  `✅ <b>Akun Kamu Sudah Aktif!</b>\n\n` +
+                  `Halo <b>${targetUser.full_name}</b>! 👋\n\n` +
+                  `Akun kamu sudah di-approve admin. Sekarang kamu bisa upload chat via bot.\n\n` +
+                  `Ketik /start untuk mulai. 🚀`,
+                parse_mode: "HTML",
+              }),
+            }
+          );
+        } catch (e) {
+          console.error("Gagal kirim notif approval:", e);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        action: "reactivated",
+        is_active: true,
+      });
     }
 
     // Deactivate

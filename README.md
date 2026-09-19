@@ -1,36 +1,143 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Agent Analysis — Dashboard Web
 
-## Getting Started
+Dashboard web untuk tim leader & supervisor menganalisis percakapan sales.
 
-First, run the development server:
+Live: https://agentanalysisweb.vercel.app
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Fitur
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Login Google OAuth (multi-akun)
+- Overview — stats, charts, recent chats
+- Chats — list + filter + search
+- Detail Chat — transcript bubble + highlight + coaching
+- Re-Analyze — trigger analisis ulang dari dashboard
+- Leaderboard — ranking agent
+- Team Saya — untuk leader/supervisor
+- Settings — LLM, Analysis, Maintenance, Profile
+- Manage Users — CRUD + tree + toggle is_active
+- Broadcast — kirim pesan massal via Telegram
+- Dark/light mode
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+- Framework: Next.js 16 (App Router)
+- Language: TypeScript
+- UI: shadcn/ui + Tailwind CSS v4
+- Font: Inter (via next/font/google)
+- Charts: Recharts
+- Auth: Supabase Auth (Google OAuth)
+- DB: Supabase PostgreSQL
+- Deploy: Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Setup
 
-## Deploy on Vercel
+Langkah install:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+    git clone https://github.com/mantangurubimbel/Agent-Analysis.git
+    cd agent_analysis_web
+    npm install
+    cp .env.local.example .env.local
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Edit .env.local — isi Supabase keys.
+
+Jalankan:
+
+    npm run dev
+
+Buka http://localhost:3000
+
+---
+
+## Environment Variables
+
+Isi file .env.local:
+
+    NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_xxx
+    NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+Untuk production, tambahkan juga:
+
+    TELEGRAM_BOT_TOKEN=8876455319:xxx
+
+---
+
+## Struktur Folder
+
+agent_analysis_web/
+  app/
+    api/                        # API routes
+      broadcast/                # Broadcast
+      chats/                    # Chats & re-analyze
+      profile/                  # User profile
+      settings/                 # App settings
+      users/                    # Manage users
+    auth/callback/              # OAuth callback
+    dashboard/                  # Dashboard pages
+      broadcast/                # Broadcast page
+      chats/                    # List & detail
+      leaderboard/              # Leaderboard
+      settings/                 # Settings
+        users/                  # Manage users
+      team/                     # Team view
+    login/                      # Login page
+    maintenance/                # Maintenance page
+    layout.tsx                  # Root layout
+    globals.css                 # Design tokens
+  components/
+    dashboard/                  # Dashboard components
+      sidebar.tsx
+      user-menu.tsx
+      chat-list.tsx
+      transcript-bubble.tsx
+      outcome-badge.tsx
+      date-range-filter.tsx
+    ui/                         # shadcn/ui
+  lib/
+    auth.ts                     # Auth helper
+    hierarchy.ts                # Hierarki query
+    roles.ts                    # Role helper
+    utils.ts                    # Utilities
+    highlight.ts                # Fuzzy match
+    supabase/                   # Supabase client
+  types/
+    database.ts                 # Type definitions
+  middleware.ts                 # Proxy wrapper
+  proxy.ts                      # Auth middleware
+
+---
+
+## Design System
+
+- Font: Inter
+- Accent: Sky (#0ea5e9 light, #38bdf8 dark)
+- Background: White (light), Slate-950 (dark)
+- Border: Slate-200 (light), Slate-800 (dark)
+- Dark mode: data-theme attribute (BUKAN .dark class)
+
+---
+
+## Deploy
+
+Deploy ke Vercel:
+
+1. Push ke GitHub
+2. Vercel -> New Project -> Import repo
+3. Set environment variables
+4. Deploy
+
+Auto-deploy setiap push ke main.
+
+---
+
+## Dokumentasi Tambahan
+
+- AGENTS.md — panduan untuk AI
+- CHANGELOG.md — history perubahan
+- Backend README — ../agent_analysis/README.md

@@ -3,14 +3,18 @@ import {
   getChatsForCurrentUser,
   getTrendData,
   getObjectionStats,
+  getObjectionHandledRate,
+  getTeamStats,
 } from "@/lib/supabase/queries";
-import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, TrendingUp, Award, Clock } from "lucide-react";
 import { TrendChart } from "@/components/dashboard/stats-charts";
 import { OutcomeChart } from "@/components/dashboard/outcome-chart";
 import { ObjectionChart } from "@/components/dashboard/objection-chart";
+import { ObjectionRateChart } from "@/components/dashboard/objection-rate-chart";
+import { TeamChart } from "@/components/dashboard/team-chart";
+import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 
 const outcomeMeta = {
   closed: {
@@ -35,24 +39,40 @@ const outcomeMeta = {
   },
 };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ days?: string }>;
+}) {
+  const params = await searchParams;
+  const daysParam = params.days || "30";
+  const days = daysParam === "all" ? 0 : parseInt(daysParam) || 30;
+
   const user = await getCurrentUser();
-  const [stats, recentChats, trendData, objections] = await Promise.all([
-    getStatsForCurrentUser(),
-    getChatsForCurrentUser(5),
-    getTrendData(14),
-    getObjectionStats(30),
-  ]);
+
+  const [stats, recentChats, trendData, objections, objectionRates, teams] =
+    await Promise.all([
+      getStatsForCurrentUser(days),
+      getChatsForCurrentUser(5),
+      getTrendData(days > 0 ? Math.min(days, 90) : 90),
+      getObjectionStats(days > 0 ? days : 365),
+      days > 0 ? getObjectionHandledRate(days) : Promise.resolve([]),
+      days > 0 ? getTeamStats(days) : Promise.resolve([]),
+    ]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
-          Halo, {user?.full_name?.split(" ")[0]} 👋
-        </h1>
-        <p className="text-sm text-[var(--text-muted)] mt-1.5">
-          Ringkasan performa 30 hari terakhir
-        </p>  
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+            Halo, {user?.full_name?.split(" ")[0]} 👋
+          </h1>
+          <p className="text-sm text-[var(--text-muted)] mt-1.5">
+            Ringkasan performa{" "}
+            {daysParam === "all" ? "semua waktu" : `${days} hari terakhir`}
+          </p>
+        </div>
+        <DateRangeFilter />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -95,13 +115,22 @@ export default async function DashboardPage() {
         <ObjectionChart data={objections} />
       </div>
 
+      {days > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ObjectionRateChart data={objectionRates} />
+          <TeamChart data={teams} />
+        </div>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Chat Terbaru</CardTitle>
+          <CardTitle className="text-base font-semibold text-[var(--text-primary)]">
+            Chat Terbaru
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {recentChats.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
+            <p className="text-sm text-[var(--text-muted)] text-center py-8">
               Belum ada chat. Upload via Telegram bot untuk memulai.
             </p>
           ) : (
@@ -109,7 +138,7 @@ export default async function DashboardPage() {
               {recentChats.map((chat) => (
                 <div
                   key={chat.chat_id}
-                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted transition-colors"
+                  className="flex items-center justify-between p-3 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-colors"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -118,20 +147,20 @@ export default async function DashboardPage() {
                           outcomeMeta[chat.outcome as keyof typeof outcomeMeta]
                             ?.emoji}
                       </span>
-                      <span className="font-medium truncate">
+                      <span className="font-medium text-[var(--text-primary)] truncate">
                         {chat.customer_name}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-[var(--text-muted)] mt-1">
                       {chat.agent_name} • {chat.total_messages} pesan •{" "}
                       {new Date(chat.created_at).toLocaleDateString("id-ID")}
                     </p>
                   </div>
                   <div className="text-right ml-4">
-                    <div className="text-lg font-bold">
+                    <div className="text-lg font-bold text-[var(--text-primary)]">
                       {chat.agent_score ?? 0}
                     </div>
-                    <div className="text-xs text-muted-foreground">skor</div>
+                    <div className="text-xs text-[var(--text-muted)]">skor</div>
                   </div>
                 </div>
               ))}
@@ -158,22 +187,23 @@ function StatCard({
 }) {
   return (
     <div
-      className={cn(
-        "rounded-lg border bg-[var(--surface)] p-6 transition-colors",
+      className={`rounded-lg border bg-[var(--surface)] p-6 transition-colors ${
         highlight
           ? "border-[var(--accent)]/30 bg-[var(--accent-subtle)]/30"
           : "border-[var(--border)]"
-      )}
+      }`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-[var(--text-secondary)]">{title}</span>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium text-[var(--text-secondary)]">
+          {title}
+        </span>
         <span className="text-[var(--text-muted)]">{icon}</span>
       </div>
       <div className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
         {value}
       </div>
       {description && (
-        <p className="text-xs text-[var(--text-muted)] mt-1">{description}</p>
+        <p className="text-xs text-[var(--text-muted)] mt-2">{description}</p>
       )}
     </div>
   );

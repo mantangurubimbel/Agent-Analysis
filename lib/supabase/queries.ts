@@ -31,16 +31,26 @@ export async function getChatsForCurrentUser(limit = 50): Promise<ChatRecord[]> 
   return (data ?? []) as ChatRecord[];
 }
 
-export async function getStatsForCurrentUser() {
+export async function getStatsForCurrentUser(days: number = 30) {
   const chats = await getChatsForCurrentUser(1000);
 
-  const total = chats.length;
-  const closed = chats.filter((c) => c.outcome === "closed").length;
-  const noResponse = chats.filter((c) => c.outcome === "no_response").length;
-  const rejected = chats.filter((c) => c.outcome === "rejected").length;
-  const pending = chats.filter((c) => c.outcome === "pending").length;
+  // Filter by date kalau days > 0
+  let filteredChats = chats;
+  if (days > 0) {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    filteredChats = chats.filter((c) => new Date(c.created_at) >= since);
+  }
 
-  const scoredChats = chats.filter((c) => c.agent_score !== null);
+  const total = filteredChats.length;
+  const closed = filteredChats.filter((c) => c.outcome === "closed").length;
+  const noResponse = filteredChats.filter(
+    (c) => c.outcome === "no_response"
+  ).length;
+  const rejected = filteredChats.filter((c) => c.outcome === "rejected").length;
+  const pending = filteredChats.filter((c) => c.outcome === "pending").length;
+
+  const scoredChats = filteredChats.filter((c) => c.agent_score !== null);
   const avgScore =
     scoredChats.length > 0
       ? scoredChats.reduce((s, c) => s + (c.agent_score ?? 0), 0) /
@@ -413,4 +423,154 @@ export async function getAgentStatsForTeam(
   );
 
   return entries;
+}
+
+export interface ObjectionHandledRate {
+  type: string;
+  total: number;
+  handled: number;
+  rate: number;
+}
+
+export async function getObjectionHandledRate(
+  days: number = 30
+): Promise<ObjectionHandledRate[]> {
+  const supabase = await createClient();
+  const user = await getCurrentUser();
+  if (!user) return [];
+
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  let query = supabase
+    .from("chats")
+    .select("analysis_json")
+    .is("deleted_at", null)
+    .gte("created_at", since.toISOString())
+    .not("analysis_json", "is", null);
+
+  const visibleIds = await getVisibleUserIds(user);
+  if (visibleIds.length > 0) {
+    query = query.in("user_id", visibleIds);
+  }
+
+  const { data } = await query;
+  if (!data) return [];
+
+  const stats: Record<string, { total: number; handled: number }> = {};
+
+  for (const row of data) {
+    try {
+      const analysis = JSON.parse(row.analysis_json ?? "{}");
+      for (const obj of analysis.objections ?? []) {
+        if (!stats[obj.type]) stats[obj.type] = { total: 0, handled: 0 };
+        stats[obj.type].total++;
+        if (obj.handled_well) stats[obj.type].handled++;
+      }
+    } catch {}
+  }
+
+  return Object.entries(stats)
+    .map(([type, s]) => ({
+      type,
+      total: s.total,
+      handled: s.handled,
+      rate: s.total > 0 ? Math.round((s.handled / s.total) * 100) : 0,
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
+export interface TeamStats {
+  team_name: string;
+  total: number;
+  closed: number;
+  closing_rate: number;
+  avg_score: number;
+  agent_count: number;
+}
+
+export async function getTeamStats(days: number = 30): Promise<TeamStats[]> {
+  const supabase = await createClient();
+  const user = await getCurrentUser();
+  if (!user) return [];
+
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const visibleIds = await getVisibleUserIds(user);
+
+  let chatsQuery = supabase
+    .from("chats")
+    .select("user_id, outcome, agent_score, created_at")
+    .is("deleted_at", null)
+    .gte("created_at", since.toISOString());
+
+  if (visibleIds.length > 0) {
+    chatsQuery = chatsQuery.in("user_id", visibleIds);
+  }
+
+  const { data: chats } = await chatsQuery;
+
+  let usersQuery = supabase
+    .from("users")
+    .select("id, team")
+    .eq("is_active", true)
+    .not("team", "is", null);
+
+  if (visibleIds.length > 0) {
+    usersQuery = usersQuery.in("id", visibleIds);
+  }
+
+  const { data: users } = await usersQuery;
+
+  if (!chats || !users) return [];
+
+  const userTeam = new Map<number, string>();
+  for (const u of users) {
+    if (u.team) userTeam.set(u.id, u.team);
+  }
+
+  const byTeam = new Map<
+    string,
+    {
+      total: number;
+      closed: number;
+      totalScore: number;
+      scoredCount: number;
+      agentIds: Set<number>;
+    }
+  >();
+
+  for (const c of chats) {
+    const team = userTeam.get(c.user_id) || "Tanpa Team";
+    if (!byTeam.has(team)) {
+      byTeam.set(team, {
+        total: 0,
+        closed: 0,
+        totalScore: 0,
+        scoredCount: 0,
+        agentIds: new Set(),
+      });
+    }
+    const entry = byTeam.get(team)!;
+    entry.total++;
+    entry.agentIds.add(c.user_id);
+    if (c.outcome === "closed") entry.closed++;
+    if (c.agent_score !== null) {
+      entry.totalScore += c.agent_score;
+      entry.scoredCount++;
+    }
+  }
+
+  return Array.from(byTeam.entries())
+    .map(([team_name, s]) => ({
+      team_name,
+      total: s.total,
+      closed: s.closed,
+      closing_rate: s.total > 0 ? Math.round((s.closed / s.total) * 100) : 0,
+      avg_score:
+        s.scoredCount > 0 ? Math.round(s.totalScore / s.scoredCount) : 0,
+      agent_count: s.agentIds.size,
+    }))
+    .sort((a, b) => b.closing_rate - a.closing_rate);
 }
