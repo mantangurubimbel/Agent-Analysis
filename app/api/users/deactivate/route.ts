@@ -18,8 +18,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "id required" }, { status: 400 });
     }
 
+    // === Ambil target user ===
+    const { data: targetUser, error: fetchError } = await supabase
+      .from("users")
+      .select("id, full_name, role, is_active, telegram_id")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !targetUser) {
+      return NextResponse.json(
+        { error: "User tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
+    // Cegah admin nonaktifkan diri sendiri
+    if (targetUser.id === user.id) {
+      return NextResponse.json(
+        { error: "Tidak bisa menonaktifkan akun sendiri" },
+        { status: 400 }
+      );
+    }
+
+    // === REACTIVATE ===
     if (reactivate) {
-      // Reactivate
       const { error } = await supabase
         .from("users")
         .update({
@@ -74,7 +96,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // Deactivate
+    // === DEACTIVATE ===
     const { error } = await supabase
       .from("users")
       .update({
@@ -97,7 +119,11 @@ export async function POST(request: Request) {
       notes: reason || "Deactivated via dashboard",
     });
 
-    return NextResponse.json({ success: true, action: "deactivated" });
+    return NextResponse.json({
+      success: true,
+      action: "deactivated",
+      is_active: false,
+    });
   } catch (e) {
     console.error("Deactivate user error:", e);
     return NextResponse.json(
