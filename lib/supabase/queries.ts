@@ -574,3 +574,46 @@ export async function getTeamStats(days: number = 30): Promise<TeamStats[]> {
     }))
     .sort((a, b) => b.closing_rate - a.closing_rate);
 }
+/**
+ * Hitung jumlah upload hari ini (reset 00:00 WIB) untuk semua agent.
+ * Return: map { user_id: count }
+ */
+export async function getTodayUploadCounts(): Promise<Record<number, number>> {
+  const supabase = await createClient();
+
+  const { startUtc, endUtc } = getTodayRangeUtc();
+
+  const { data, error } = await supabase
+    .from("upload_logs")
+    .select("user_id")
+    .gte("uploaded_at", startUtc)
+    .lt("uploaded_at", endUtc);
+
+  if (error || !data) return {};
+
+  const counts: Record<number, number> = {};
+  for (const row of data as { user_id: number }[]) {
+    counts[row.user_id] = (counts[row.user_id] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/**
+ * Rentang hari ini menurut WIB (UTC+7), dikonversi ke string ISO UTC.
+ * Dipakai supaya reset tepat jam 00:00 WIB, bukan 00:00 UTC.
+ */
+function getTodayRangeUtc(): { startUtc: string; endUtc: string } {
+  const nowWib = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
+  );
+  const startWib = new Date(nowWib);
+  startWib.setHours(0, 0, 0, 0);
+  const endWib = new Date(startWib);
+  endWib.setDate(endWib.getDate() + 1);
+
+  const offsetMs = 7 * 60 * 60 * 1000;
+  return {
+    startUtc: new Date(startWib.getTime() - offsetMs).toISOString(),
+    endUtc: new Date(endWib.getTime() - offsetMs).toISOString(),
+  };
+}

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, UserCheck, UserX } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { UserFormDialog } from "./user-form-dialog";
 import { ActiveToggle } from "./active-toggle";
 import type { User } from "@/types/database";
@@ -24,7 +23,17 @@ const roleColor = {
   agent: "bg-[var(--bg-secondary)] text-[var(--text-muted)]",
 };
 
-export function UserTree({ users }: { users: User[] }) {
+interface UserTreeProps {
+  users: User[];
+  uploadCounts?: Record<number, number>;
+  uploadLimit?: number | null;
+}
+
+export function UserTree({
+  users,
+  uploadCounts = {},
+  uploadLimit = null,
+}: UserTreeProps) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
   const admins = users.filter((u) => u.role === "admin");
@@ -42,16 +51,17 @@ export function UserTree({ users }: { users: User[] }) {
     setExpanded(newSet);
   };
 
-  // Default: expand admin
   const isExpanded = (id: number) => expanded.has(id);
+
+  const sharedProps = { users, uploadCounts, uploadLimit };
 
   return (
     <div className="space-y-2">
       {admins.map((admin) => (
         <div key={admin.id} className="space-y-2">
           <UserRow
+            {...sharedProps}
             user={admin}
-            users={users}
             isExpanded={isExpanded(admin.id)}
             onToggle={() => toggleExpand(admin.id)}
           />
@@ -61,8 +71,8 @@ export function UserTree({ users }: { users: User[] }) {
               {supervisors.map((sup) => (
                 <div key={sup.id} className="space-y-2">
                   <UserRow
+                    {...sharedProps}
                     user={sup}
-                    users={users}
                     isExpanded={isExpanded(sup.id)}
                     onToggle={() => toggleExpand(sup.id)}
                   />
@@ -76,7 +86,7 @@ export function UserTree({ users }: { users: User[] }) {
                             key={leader.id}
                             leader={leader}
                             agents={agents}
-                            users={users}
+                            {...sharedProps}
                             expanded={expanded}
                             toggleExpand={toggleExpand}
                           />
@@ -86,7 +96,6 @@ export function UserTree({ users }: { users: User[] }) {
                 </div>
               ))}
 
-              {/* Leaders tanpa supervisor */}
               {leaders
                 .filter((l) => !l.supervisor_id)
                 .map((leader) => (
@@ -94,20 +103,19 @@ export function UserTree({ users }: { users: User[] }) {
                     key={leader.id}
                     leader={leader}
                     agents={agents}
-                    users={users}
+                    {...sharedProps}
                     expanded={expanded}
                     toggleExpand={toggleExpand}
                   />
                 ))}
 
-              {/* Agents tanpa leader */}
               {agents
                 .filter((a) => !a.leader_id)
                 .map((agent) => (
                   <UserRow
+                    {...sharedProps}
                     key={agent.id}
                     user={agent}
-                    users={users}
                     isExpanded={false}
                     onToggle={() => {}}
                   />
@@ -117,14 +125,13 @@ export function UserTree({ users }: { users: User[] }) {
         </div>
       ))}
 
-      {/* Kalau tidak ada admin, tampilkan tree dari supervisor */}
       {admins.length === 0 && (
         <div className="space-y-2">
           {supervisors.map((sup) => (
             <div key={sup.id} className="space-y-2">
               <UserRow
+                {...sharedProps}
                 user={sup}
-                users={users}
                 isExpanded={isExpanded(sup.id)}
                 onToggle={() => toggleExpand(sup.id)}
               />
@@ -137,7 +144,7 @@ export function UserTree({ users }: { users: User[] }) {
                         key={leader.id}
                         leader={leader}
                         agents={agents}
-                        users={users}
+                        {...sharedProps}
                         expanded={expanded}
                         toggleExpand={toggleExpand}
                       />
@@ -156,12 +163,16 @@ function LeaderNode({
   leader,
   agents,
   users,
+  uploadCounts,
+  uploadLimit,
   expanded,
   toggleExpand,
 }: {
   leader: User;
   agents: User[];
   users: User[];
+  uploadCounts: Record<number, number>;
+  uploadLimit: number | null;
   expanded: Set<number>;
   toggleExpand: (id: number) => void;
 }) {
@@ -173,6 +184,8 @@ function LeaderNode({
       <UserRow
         user={leader}
         users={users}
+        uploadCounts={uploadCounts}
+        uploadLimit={uploadLimit}
         isExpanded={isExpanded}
         onToggle={() => toggleExpand(leader.id)}
       />
@@ -183,6 +196,8 @@ function LeaderNode({
               key={agent.id}
               user={agent}
               users={users}
+              uploadCounts={uploadCounts}
+              uploadLimit={uploadLimit}
               isExpanded={false}
               onToggle={() => {}}
             />
@@ -196,11 +211,15 @@ function LeaderNode({
 function UserRow({
   user,
   users,
+  uploadCounts,
+  uploadLimit,
   isExpanded,
   onToggle,
 }: {
   user: User;
   users: User[];
+  uploadCounts: Record<number, number>;
+  uploadLimit: number | null;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
@@ -211,6 +230,18 @@ function UserRow({
 
   const subCount = getSubordinateCount(user, users);
   const hasSubs = subCount > 0;
+
+  // Counter upload (hanya untuk agent & kalau limit aktif)
+  const showUploadCounter =
+    user.role === "agent" && uploadLimit !== null && uploadLimit > 0;
+  const uploadCount = uploadCounts[user.id] ?? 0;
+  const uploadPct = showUploadCounter ? uploadCount / uploadLimit : 0;
+  const uploadBadgeClass =
+    uploadPct >= 1
+      ? "bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300"
+      : uploadPct >= 0.8
+      ? "bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300"
+      : "bg-[var(--bg-secondary)] text-[var(--text-muted)]";
 
   return (
     <div
@@ -257,21 +288,28 @@ function UserRow({
             </div>
           </div>
 
-          {/* Toggle Active */}
+          {/* Upload Counter (khusus agent) */}
+          {showUploadCounter && (
+            <div
+              className={`text-xs font-medium px-2 py-1 rounded ${uploadBadgeClass}`}
+              title={`Upload hari ini: ${uploadCount}/${uploadLimit} (reset 00:00 WIB)`}
+            >
+              📤 {uploadCount}/{uploadLimit}
+            </div>
+          )}
+
           <ActiveToggle
             userId={user.id}
             userName={user.full_name}
             isActive={user.is_active !== false}
           />
 
-          {/* Edit */}
           <UserFormDialog mode="edit" user={user} allUsers={users} />
         </div>
       </div>
     </div>
   );
 }
-
 
 function getSubordinateCount(user: User, users: User[]): number {
   if (user.role === "supervisor") {

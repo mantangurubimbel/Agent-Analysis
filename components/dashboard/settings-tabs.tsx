@@ -1,18 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, BarChart3, User as UserIcon, Wrench } from "lucide-react";
+import { Bot, BarChart3, User as UserIcon, Wrench, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LLMConfig } from "./llm-config";
 import { AnalysisConfig } from "./analysis-config";
 import { ProfileConfig } from "./profile-config";
 import { MaintenanceConfig } from "./maintenance-config";
+import { UploadLimitConfig } from "./upload-limit-config";
 
-type Tab = "llm" | "analysis" | "profile" | "maintenance";
+type Tab = "llm" | "analysis" | "upload-limit" | "maintenance" | "profile";
 
 const TABS = [
   { id: "llm" as const, label: "LLM", icon: Bot, roles: ["admin"] },
   { id: "analysis" as const, label: "Analysis", icon: BarChart3, roles: ["admin"] },
+  { id: "upload-limit" as const, label: "Upload Limit", icon: Upload, roles: ["admin"] },
   { id: "maintenance" as const, label: "Maintenance", icon: Wrench, roles: ["admin"] },
   { id: "profile" as const, label: "Profile", icon: UserIcon, roles: ["admin", "leader", "supervisor", "agent"] },
 ];
@@ -48,6 +50,7 @@ export function SettingsTabs({ userRole }: { userRole: string }) {
       <div>
         {activeTab === "llm" && <LLMConfig />}
         {activeTab === "analysis" && <AnalysisConfig />}
+        {activeTab === "upload-limit" && <UploadLimitConfig />}
         {activeTab === "maintenance" && <MaintenanceConfig />}
         {activeTab === "profile" && <ProfileConfig />}
       </div>
