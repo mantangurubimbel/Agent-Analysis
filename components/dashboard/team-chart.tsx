@@ -38,7 +38,7 @@ export function TeamChart({ data }: { data: TeamStats[] }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base font-semibold text-[var(--text-primary)]">
-          👥 Perbandingan Team
+          👥 Team Comparison
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -51,7 +51,7 @@ export function TeamChart({ data }: { data: TeamStats[] }) {
             <BarChart
               data={chartData}
               layout="vertical"
-              margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
+              margin={{ top: 5, right: 20, left: 40, bottom: 5 }}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -82,7 +82,14 @@ export function TeamChart({ data }: { data: TeamStats[] }) {
                   padding: "8px 12px",
                   boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
                 }}
-                labelStyle={{ color: "var(--text-primary)", fontWeight: 600 }}
+                labelStyle={{
+                  color: "var(--text-primary)",
+                  fontWeight: 600,
+                  marginBottom: "4px",
+                }}
+                itemStyle={{
+                  color: "var(--text-secondary)",
+                }}
                 formatter={(value: any, name: any, props: any) => [
                   `${value}% (${props.payload.total} chat)`,
                   "Closing Rate",

@@ -332,3 +332,13 @@ html[data-theme="dark"] ::selection {
   background-color: #075985;
   color: #ffffff;
 }
+
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+
+.recharts-default-tooltip {
+  background-color: var(--surface-elevated) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-primary) !important;
+}
