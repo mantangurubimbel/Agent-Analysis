@@ -62,6 +62,12 @@ WAJIB pakai match paling spesifik:
 
 Kenapa: startsWith tanpa / bikin 2 menu aktif bersamaan.
 
+### 6. Timezone & Reset Harian
+- Semua timestamp di Supabase pakai UTC
+- Reset "hari" untuk fitur apapun (limit upload, statistik harian) pakai WIB (UTC+7)
+- Jangan pakai new Date().toISOString().slice(0,10) untuk filter harian
+- Gunakan getTodayRangeUtc() dari lib/supabase/queries.ts (return {startUtc, endUtc})
+
 ---
 
 ## File Penting
@@ -74,6 +80,8 @@ lib/auth.ts — getCurrentUser()
 lib/hierarchy.ts — Query hierarki
 lib/supabase/queries.ts — Query chat, leaderboard, dll
 components/dashboard/sidebar.tsx — Menu sidebar
+components/dashboard/upload-limit-config.tsx — Form tab Upload Limit
+app/api/settings/upload-limit/route.ts — API upload limit (GET/POST)
 
 ---
 
@@ -176,6 +184,40 @@ Komponen yang sudah ada:
 
 ---
 
+## Upload Limit
+
+Fitur pembatasan upload chat WA per agent per hari. Sinkron dengan
+command Telegram /setlimit di backend.
+
+### Lokasi
+- Tab "Upload Limit" di /dashboard/settings (admin only)
+- Counter "Upload X/Y" per agent di /dashboard/settings/users
+
+### API
+- GET  /api/settings/upload-limit
+  - return { enabled, default_limit, stats: { total_upload_today } }
+- POST /api/settings/upload-limit
+  - body: { enabled?, default_limit? }
+  - update app_settings: upload.daily_limit_enabled, upload.daily_limit_default
+
+### Query
+- getTodayUploadCounts() di lib/supabase/queries.ts
+  - return map { user_id: count } untuk hari ini (reset 00:00 WIB)
+
+### Tabel DB
+- upload_logs — log upload (kolom: user_id, chat_id, file_hash, file_name, uploaded_at)
+- Setting di app_settings:
+  - upload.daily_limit_enabled (boolean)
+  - upload.daily_limit_default (number)
+
+### Aturan
+- Admin bypass limit
+- Limit ON/OFF via toggle
+- OFF = unlimited
+- Reset otomatis 00:00 WIB (lihat Aturan Wajib #6)
+
+---
+
 ## Known Issues & Fix
 
 1. Next.js 16 middleware -> proxy — FIXED — Rename middleware.ts -> proxy.ts
@@ -224,4 +266,4 @@ Setelah deploy, update:
 
 ---
 
-Terakhir update: 19 September 2026
+Terakhir update: 20 September 2026
