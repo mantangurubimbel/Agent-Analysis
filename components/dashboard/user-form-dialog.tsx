@@ -49,28 +49,29 @@ export function UserFormDialog({ mode, user, allUsers }: UserFormDialogProps) {
   // Reset form saat dialog dibuka
   useEffect(() => {
     if (open) {
-      if (mode === "edit" && user) {
-        setFullName(user.full_name ?? "");
-        setTelegramId(String(user.telegram_id ?? ""));
-        setUsername(user.username ?? "");
-        setEmail(user.email ?? "");
-        setRole(user.role);
-        setTeam(user.team ?? "");
-        setLeaderId(user.leader_id ? String(user.leader_id) : "");
-        setSupervisorId(
-          user.supervisor_id ? String(user.supervisor_id) : ""
-        );
-      } else {
-        setFullName("");
-        setTelegramId("");
-        setUsername("");
-        setEmail("");
-        setRole("agent");
-        setTeam("");
-        setLeaderId("");
-        setSupervisorId("");
-      }
-      setError(null);
+      const timer = setTimeout(() => {
+        if (mode === "edit" && user) {
+          setFullName(user.full_name ?? "");
+          setTelegramId(String(user.telegram_id ?? ""));
+          setUsername(user.username ?? "");
+          setEmail(user.email ?? "");
+          setRole(user.role);
+          setTeam(user.team ?? "");
+          setLeaderId(user.leader_id ? String(user.leader_id) : "");
+          setSupervisorId(user.supervisor_id ? String(user.supervisor_id) : "");
+        } else {
+          setFullName("");
+          setTelegramId("");
+          setUsername("");
+          setEmail("");
+          setRole("agent");
+          setTeam("");
+          setLeaderId("");
+          setSupervisorId("");
+        }
+        setError(null);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [open, mode, user]);
 

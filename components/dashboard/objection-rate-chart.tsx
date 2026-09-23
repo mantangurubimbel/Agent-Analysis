@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ObjectionHandledRate } from "@/lib/supabase/queries";
+import type { TooltipPayloadEntry, TooltipValueType } from "recharts";
 
 const OBJECTION_LABELS: Record<string, string> = {
   price: "Harga",
@@ -87,10 +88,20 @@ export function ObjectionRateChart({ data }: { data: ObjectionHandledRate[] }) {
                 itemStyle={{
                   color: "var(--text-secondary)",
                 }}
-                formatter={(value: any, name: any, props: any) => [
-                  `${value}% (${props.payload.handled}/${props.payload.total})`,
-                  "Handled Rate",
-                ]}
+                formatter={(
+                  value: TooltipValueType | undefined,
+                  _name: string | number | undefined,
+                  item: TooltipPayloadEntry
+                ) => {
+                  const payload = item.payload as {
+                    handled: number;
+                    total: number;
+                  };
+                  return [
+                    `${value}% (${payload.handled}/${payload.total})`,
+                    "Handled Rate",
+                  ];
+                }}
               />
               <Bar dataKey="rate" radius={[0, 4, 4, 0]}>
                 {chartData.map((entry, index) => (

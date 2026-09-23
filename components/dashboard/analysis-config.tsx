@@ -27,10 +27,6 @@ export function AnalysisConfig() {
   const [newCompanyKeyword, setNewCompanyKeyword] = useState("");
   const [newAgentKeyword, setNewAgentKeyword] = useState("");
 
-  useEffect(() => {
-    loadConfig();
-  }, []);
-
   async function loadConfig() {
     setLoading(true);
     try {
@@ -44,6 +40,11 @@ export function AnalysisConfig() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    const timer = setTimeout(() => void loadConfig(), 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   async function handleSave() {
     if (!config) return;

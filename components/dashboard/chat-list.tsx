@@ -10,6 +10,7 @@ import { OutcomeBadge } from "@/components/dashboard/outcome-badge";
 import { cn } from "@/lib/utils";
 import type { ChatRecord } from "@/types/database";
 import { isChatFailed } from "@/types/database";
+import { formatWibDateTime } from "@/lib/timezone";
 
 const OUTCOME_FILTERS = [
   { value: "all", label: "Semua" },
@@ -44,13 +45,20 @@ export function ChatList({
   const [searchResults, setSearchResults] = useState<ChatRecord[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [reanalyzing, setReanalyzing] = useState<Set<string>>(new Set());
+  const [reparsing, setReparsing] = useState<Set<string>>(new Set());
 
   const canReanalyze = ["admin", "supervisor"].includes(userRole);
-  console.log("[ChatList] userRole:", userRole, "canReanalyze:", canReanalyze);
+  const canReparse = userRole === "admin";
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    if (!searchFn || !value || value.trim().length < 2) {
+      setSearchResults(null);
+    }
+  }
 
   useEffect(() => {
     if (!searchFn || !search || search.trim().length < 2) {
-      setSearchResults(null);
       return;
     }
 
@@ -151,6 +159,30 @@ export function ChatList({
     }
   }
 
+  async function handleReparse(chatId: string) {
+    setReparsing((prev) => new Set(prev).add(chatId));
+
+    try {
+      const res = await fetch("/api/chats/reparse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal parse ulang");
+
+      alert("✅ Chat dijadwalkan untuk parse ulang dan analisis ulang.");
+      setTimeout(() => window.location.reload(), 3000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Gagal parse ulang");
+      setReparsing((prev) => {
+        const next = new Set(prev);
+        next.delete(chatId);
+        return next;
+      });
+    }
+  }
+
   return (
     <div className="space-y-4">
       {canReanalyze && failedChats.length > 0 && (
@@ -188,7 +220,7 @@ export function ChatList({
           <Input
             placeholder="Cari customer, agent, atau isi percakapan..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-9 pr-9 bg-[var(--surface)] border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
           />
           {search && (
@@ -262,6 +294,7 @@ export function ChatList({
           {filtered.map((chat) => {
             const failed = isChatFailed(chat);
             const isReanalyzing = reanalyzing.has(chat.chat_id);
+            const isReparsing = reparsing.has(chat.chat_id);
 
             return (
               <div
@@ -274,10 +307,8 @@ export function ChatList({
                 )}
               >
                 <div className="p-4 flex items-center gap-4">
-                  <Link
-                    href={`/dashboard/chats/${chat.chat_id}`}
-                    className="flex-1 min-w-0"
-                  >
+                  <div className="flex-1 min-w-0">
+                    <Link href={`/dashboard/chats/${chat.chat_id}`}>
                     <div className="flex items-center gap-2 mb-1.5">
                       {failed ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-900">
@@ -291,17 +322,25 @@ export function ChatList({
                         {chat.customer_name}
                       </span>
                     </div>
+                    </Link>
                     <p className="text-xs text-[var(--text-muted)]">
                       {chat.agent_name} • {chat.total_messages} pesan •{" "}
-                      {new Date(chat.created_at).toLocaleString("id-ID", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatWibDateTime(chat.created_at)}
+                      {canReparse && (
+                        <>
+                          {" • "}
+                          <button
+                            type="button"
+                            onClick={() => handleReparse(chat.chat_id)}
+                            disabled={isReparsing}
+                            className="font-medium text-[var(--accent)] hover:underline disabled:opacity-60"
+                          >
+                            {isReparsing ? "Memproses..." : "Parse Ulang"}
+                          </button>
+                        </>
+                      )}
                     </p>
-                  </Link>
+                  </div>
 
                   {!failed && (
                     <div className="text-center px-4 border-l border-[var(--border)]">

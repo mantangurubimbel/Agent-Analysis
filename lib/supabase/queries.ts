@@ -1,7 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getVisibleUserIds } from "@/lib/hierarchy";
+import {
+  getTodayRangeUtc,
+  getWibDateKey,
+  getWibMidnightUtc,
+  parseDbTimestamp,
+  WIB_TIME_ZONE,
+} from "@/lib/timezone";
 import type { ChatRecord, Transcript } from "@/types/database";
+
+function formatWibDateLabel(date: Date): string {
+  return new Intl.DateTimeFormat("id-ID", {
+    timeZone: WIB_TIME_ZONE,
+    day: "2-digit",
+    month: "short",
+  }).format(date);
+}
 
 export async function getChatsForCurrentUser(limit = 50): Promise<ChatRecord[]> {
   const supabase = await createClient();
@@ -37,9 +52,8 @@ export async function getStatsForCurrentUser(days: number = 30) {
   // Filter by date kalau days > 0
   let filteredChats = chats;
   if (days > 0) {
-    const since = new Date();
-    since.setDate(since.getDate() - days);
-    filteredChats = chats.filter((c) => new Date(c.created_at) >= since);
+    const since = getWibMidnightUtc(new Date(), days);
+    filteredChats = chats.filter((c) => parseDbTimestamp(c.created_at) >= since);
   }
 
   const total = filteredChats.length;
@@ -73,19 +87,21 @@ export async function getChatById(chatId: string): Promise<ChatRecord | null> {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("chats")
     .select("*")
     .is("deleted_at", null)
-    .eq("chat_id", chatId)
-    .single();
+    .eq("chat_id", chatId);
+
+  const visibleIds = await getVisibleUserIds(user);
+  if (visibleIds.length > 0) {
+    query = query.in("user_id", visibleIds);
+  }
+
+  const { data, error } = await query.single();
 
   if (error || !data) {
     console.error("Error fetching chat:", error);
-    return null;
-  }
-
-  if (user.role === "agent" && data.user_id !== user.id) {
     return null;
   }
 
@@ -94,12 +110,21 @@ export async function getChatById(chatId: string): Promise<ChatRecord | null> {
 
 export async function getTranscript(chatId: string): Promise<Transcript | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  let query = supabase
     .from("chats")
     .select("transcript_json")
     .eq("chat_id", chatId)
-    .is("deleted_at", null)
-    .single();
+    .is("deleted_at", null);
+
+  const visibleIds = await getVisibleUserIds(user);
+  if (visibleIds.length > 0) {
+    query = query.in("user_id", visibleIds);
+  }
+
+  const { data, error } = await query.single();
 
   if (error || !data?.transcript_json) {
     console.error("Error fetching transcript:", error);
@@ -133,8 +158,7 @@ export async function getLeaderboard(days = 30): Promise<LeaderboardEntry[]> {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const since = new Date();
-  since.setDate(since.getDate() - days);
+  const since = getWibMidnightUtc(new Date(), days);
 
   let query = supabase
     .from("chats")
@@ -218,14 +242,15 @@ export async function getTrendData(days = 14): Promise<TrendPoint[]> {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const since = new Date();
-  since.setDate(since.getDate() - days);
+  const since = getWibMidnightUtc(new Date(), Math.max(days - 1, 0));
+  const end = getWibMidnightUtc(new Date(), -1);
 
   let query = supabase
     .from("chats")
     .select("created_at, outcome")
     .is("deleted_at", null)
     .gte("created_at", since.toISOString())
+    .lt("created_at", end.toISOString())
     .order("created_at", { ascending: true });
 
   const visibleIds = await getVisibleUserIds(user);
@@ -238,7 +263,7 @@ export async function getTrendData(days = 14): Promise<TrendPoint[]> {
 
   const byDate = new Map<string, { total: number; closed: number }>();
   for (const c of chats) {
-    const date = new Date(c.created_at).toISOString().slice(0, 10);
+    const date = getWibDateKey(parseDbTimestamp(c.created_at));
     if (!byDate.has(date)) byDate.set(date, { total: 0, closed: 0 });
     const entry = byDate.get(date)!;
     entry.total++;
@@ -247,12 +272,11 @@ export async function getTrendData(days = 14): Promise<TrendPoint[]> {
 
   const result: TrendPoint[] = [];
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
+    const d = new Date(getWibMidnightUtc(new Date(), i).getTime());
+    const key = getWibDateKey(d);
     const entry = byDate.get(key) ?? { total: 0, closed: 0 };
     result.push({
-      date: d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }),
+      date: formatWibDateLabel(d),
       total: entry.total,
       closed: entry.closed,
       closing_rate:
@@ -273,8 +297,7 @@ export async function getObjectionStats(days = 30): Promise<ObjectionStat[]> {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const since = new Date();
-  since.setDate(since.getDate() - days);
+  const since = getWibMidnightUtc(new Date(), days);
 
   let query = supabase
     .from("chats")
@@ -439,8 +462,7 @@ export async function getObjectionHandledRate(
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const since = new Date();
-  since.setDate(since.getDate() - days);
+  const since = getWibMidnightUtc(new Date(), days);
 
   let query = supabase
     .from("chats")
@@ -494,8 +516,7 @@ export async function getTeamStats(days: number = 30): Promise<TeamStats[]> {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const since = new Date();
-  since.setDate(since.getDate() - days);
+  const since = getWibMidnightUtc(new Date(), days);
 
   const visibleIds = await getVisibleUserIds(user);
 
@@ -596,24 +617,4 @@ export async function getTodayUploadCounts(): Promise<Record<number, number>> {
     counts[row.user_id] = (counts[row.user_id] ?? 0) + 1;
   }
   return counts;
-}
-
-/**
- * Rentang hari ini menurut WIB (UTC+7), dikonversi ke string ISO UTC.
- * Dipakai supaya reset tepat jam 00:00 WIB, bukan 00:00 UTC.
- */
-function getTodayRangeUtc(): { startUtc: string; endUtc: string } {
-  const nowWib = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
-  );
-  const startWib = new Date(nowWib);
-  startWib.setHours(0, 0, 0, 0);
-  const endWib = new Date(startWib);
-  endWib.setDate(endWib.getDate() + 1);
-
-  const offsetMs = 7 * 60 * 60 * 1000;
-  return {
-    startUtc: new Date(startWib.getTime() - offsetMs).toISOString(),
-    endUtc: new Date(endWib.getTime() - offsetMs).toISOString(),
-  };
 }

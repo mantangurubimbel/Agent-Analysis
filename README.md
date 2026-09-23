@@ -1,143 +1,145 @@
 # Agent Analysis — Dashboard Web
 
-Dashboard web untuk tim leader & supervisor menganalisis percakapan sales.
+Dashboard Next.js untuk tim leader, supervisor, admin, dan agent dalam melihat analisis percakapan sales WhatsApp.
 
 Live: https://agentanalysisweb.vercel.app
 
----
+Status dokumentasi: diperbarui berdasarkan source code per 23 September 2026.
 
 ## Fitur
 
-- Login Google OAuth (multi-akun)
-- Overview — stats, charts, recent chats
-- Chats — list + filter + search
-- Detail Chat — transcript bubble + highlight + coaching
-- Re-Analyze — trigger analisis ulang dari dashboard
-- Leaderboard — ranking agent
-- Team Saya — untuk leader/supervisor
-- Settings — LLM, Analysis, Maintenance, Profile
-- Manage Users — CRUD + tree + toggle is_active
-- Broadcast — kirim pesan massal via Telegram
-- Dark/light mode
+- Login Google OAuth multi-akun.
+- Overview dengan stats, trend chat, outcome, objection, handled rate, dan perbandingan team.
+- Date range 7/30/90 hari atau semua waktu.
+- Chats: list, filter, search, detail transcript, highlight objection, coaching, dan soft delete.
+- Re-analyze single/bulk melalui queue backend.
+- Leaderboard dan Team Saya.
+- Settings: LLM, Analysis, Profile, Maintenance, dan Upload Limit.
+- Manage Users: CRUD, tree hierarki, toggle `is_active`, dan counter upload.
+- Broadcast Telegram: preview, kirim, filter role/team, dan history.
+- Dark/light mode dengan custom ThemeProvider.
 
----
+## Tech stack
 
-## Tech Stack
+- Next.js 16.3.5 App Router.
+- React 19.2.8 dan TypeScript.
+- shadcn/ui + Tailwind CSS v4.
+- Inter + JetBrains Mono via `next/font/google`.
+- Recharts.
+- Supabase Auth, PostgreSQL, dan `@supabase/ssr`.
+- Deploy Vercel.
 
-- Framework: Next.js 16 (App Router)
-- Language: TypeScript
-- UI: shadcn/ui + Tailwind CSS v4
-- Font: Inter (via next/font/google)
-- Charts: Recharts
-- Auth: Supabase Auth (Google OAuth)
-- DB: Supabase PostgreSQL
-- Deploy: Vercel
+## Setup lokal
 
----
+```bash
+git clone https://github.com/mantangurubimbel/Agent-Analysis.git
+cd agent_analysis_web
+npm install
+cp .env.local.example .env.local
+npm run dev
+```
 
-## Setup
+Buka http://localhost:3000.
 
-Langkah install:
+Isi `.env.local`:
 
-    git clone https://github.com/mantangurubimbel/Agent-Analysis.git
-    cd agent_analysis_web
-    npm install
-    cp .env.local.example .env.local
+```text
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_xxx
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
 
-Edit .env.local — isi Supabase keys.
+Untuk production, atur environment variables di Vercel dashboard. Jangan menaruh API key/token nyata di repository atau dokumentasi.
 
-Jalankan:
+## Struktur folder
 
-    npm run dev
-
-Buka http://localhost:3000
-
----
-
-## Environment Variables
-
-Isi file .env.local:
-
-    NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-    NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_xxx
-    NEXT_PUBLIC_SITE_URL=http://localhost:3000
-
-Untuk production, tambahkan juga:
-
-    TELEGRAM_BOT_TOKEN=8876455319:xxx
-
----
-
-## Struktur Folder
-
+```text
 agent_analysis_web/
   app/
-    api/                        # API routes
-      broadcast/                # Broadcast
-      chats/                    # Chats & re-analyze
-      profile/                  # User profile
-      settings/                 # App settings
-      users/                    # Manage users
-    auth/callback/              # OAuth callback
-    dashboard/                  # Dashboard pages
-      broadcast/                # Broadcast page
-      chats/                    # List & detail
-      leaderboard/              # Leaderboard
-      settings/                 # Settings
-        users/                  # Manage users
-      team/                     # Team view
-    login/                      # Login page
-    maintenance/                # Maintenance page
-    layout.tsx                  # Root layout
-    globals.css                 # Design tokens
+    api/                  # route broadcast, chat, users, settings, profile
+    auth/callback/        # OAuth callback
+    dashboard/            # overview, chats, team, leaderboard, settings
+    login/                # halaman login
+    maintenance/          # halaman maintenance
+    layout.tsx            # root layout + theme bootstrap
+    globals.css           # design tokens
   components/
-    dashboard/                  # Dashboard components
-      sidebar.tsx
-      user-menu.tsx
-      chat-list.tsx
-      transcript-bubble.tsx
-      outcome-badge.tsx
-      date-range-filter.tsx
-    ui/                         # shadcn/ui
+    dashboard/            # dashboard components
+    theme/                # theme provider/toggle
+    ui/                    # shadcn/ui
   lib/
-    auth.ts                     # Auth helper
-    hierarchy.ts                # Hierarki query
-    roles.ts                    # Role helper
-    utils.ts                    # Utilities
-    highlight.ts                # Fuzzy match
-    supabase/                   # Supabase client
-  types/
-    database.ts                 # Type definitions
-  middleware.ts                 # Proxy wrapper
-  proxy.ts                      # Auth middleware
+    auth.ts               # current user
+    hierarchy.ts           # query hierarki
+    roles.ts               # role helper
+    supabase/              # client, middleware, queries
+  types/database.ts        # tipe database/frontend
+  proxy.ts                 # wrapper middleware Next.js 16
+```
 
----
+## Auth dan middleware
 
-## Design System
+`proxy.ts` adalah entry middleware resmi Next.js 16 dan meneruskan request ke `lib/supabase/middleware.ts`. Public paths, session refresh, user aktif, dan maintenance mode diproses di sana.
 
-- Font: Inter
-- Accent: Sky (#0ea5e9 light, #38bdf8 dark)
-- Background: White (light), Slate-950 (dark)
-- Border: Slate-200 (light), Slate-800 (dark)
-- Dark mode: data-theme attribute (BUKAN .dark class)
+`getCurrentUser()` menggunakan email case-insensitive dan hanya menerima user DB dengan `is_active=true`. API route tidak boleh hanya mengandalkan visibility menu; authorization harus diperiksa ulang di server.
 
----
+## Role
 
-## Deploy
+- Admin: seluruh fitur administrasi.
+- Supervisor: team, chats sesuai hierarki, leaderboard, settings yang diizinkan, broadcast.
+- Leader: team/chats sesuai hierarki dan leaderboard.
+- Agent: dashboard dan data miliknya.
 
-Deploy ke Vercel:
+## Upload Limit
 
-1. Push ke GitHub
-2. Vercel -> New Project -> Import repo
-3. Set environment variables
-4. Deploy
+Upload limit berada di `/dashboard/settings` dan hanya dapat diubah admin. Counter per agent tampil di `/dashboard/settings/users`.
 
-Auto-deploy setiap push ke main.
+API:
 
----
+- `GET /api/settings/upload-limit` — baca enabled, default limit, dan total upload hari ini.
+- `POST /api/settings/upload-limit` — ubah enabled/default limit.
 
-## Dokumentasi Tambahan
+Backend Telegram dan frontend menggunakan `app_settings` serta `upload_logs` yang sama. Reset harian memakai WIB, dengan timestamp database tetap UTC. Frontend belum memiliki chart trending upload 7 hari, per-agent override, atau export CSV.
 
-- AGENTS.md — panduan untuk AI
-- CHANGELOG.md — history perubahan
-- Backend README — ../agent_analysis/README.md
+## Design system
+
+- Font utama: Inter.
+- Accent: Sky `#0ea5e9` light dan `#38bdf8` dark.
+- Background/border menggunakan CSS variables.
+- Dark mode menggunakan `data-theme="dark"`, bukan `.dark` class.
+- Route active sidebar memakai match paling spesifik dengan boundary `/`.
+
+## Test dan build
+
+```bash
+npm run lint
+npm run build
+```
+
+Development:
+
+```bash
+npm run dev
+npm start
+```
+
+## Deployment
+
+Push ke GitHub branch yang terhubung dengan Vercel. Setelah deploy, verifikasi:
+
+1. Google OAuth callback dan multi-akun.
+2. User aktif/nonaktif dan redirect middleware.
+3. Overview/charts dan filter tanggal.
+4. Chat detail serta re-analyze.
+5. Settings, upload limit, broadcast, dan maintenance.
+
+Sinkronisasi OAuth juga memerlukan Supabase Site URL/Redirect URLs dan Google Cloud Authorized JavaScript origins yang benar.
+
+## Dokumentasi
+
+- [AGENTS.md](AGENTS.md) — instruksi kerja aktif untuk AI agent.
+- [CHANGELOG.md](CHANGELOG.md) — riwayat perubahan frontend.
+- [NOTES.md](NOTES.md) — status implementasi dan pekerjaan lanjutan.
+- [Dokumentasi lama](docs/archive/2026-09-22/) — backup sebelum audit dokumentasi.
+- Backend: `../agent_analysis`.
+
+Repository: https://github.com/mantangurubimbel/Agent-Analysis

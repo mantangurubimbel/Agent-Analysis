@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LLM_PROVIDERS } from "@/lib/llm";
 
 interface ProviderConfig {
   model: string;
@@ -189,8 +190,8 @@ export function LLMConfig() {
               className="w-full mt-1 px-3 py-2 text-sm rounded-md border bg-background"
             >
               <option value="groq">Groq</option>
-              <option value="gemini">Gemini</option>
               <option value="openrouter">OpenRouter</option>
+              <option value="gemini">Gemini</option>
             </select>
             <p className="text-xs text-muted-foreground mt-1">
               Provider yang dipakai pertama kali
@@ -234,7 +235,7 @@ export function LLMConfig() {
       </Card>
 
       {/* Provider Configs */}
-      {(["groq", "gemini", "openrouter"] as const).map((provider) => {
+      {LLM_PROVIDERS.map((provider) => {
         const pcfg = config.providers[provider];
         const testResult = testResults[provider];
 

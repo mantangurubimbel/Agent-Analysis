@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { getVisibleUserIds } from "@/lib/hierarchy";
 
 const MAX_BULK = 10;
 
@@ -30,11 +31,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: chats, error: chatError } = await supabase
+    const visibleIds = await getVisibleUserIds(user);
+
+    let chatsQuery = supabase
       .from("chats")
-      .select("chat_id, outcome, agent_score, root_cause, analysis_json")
+      .select("chat_id, user_id, outcome, agent_score, root_cause, analysis_json")
       .in("chat_id", chat_ids)
       .is("deleted_at", null);
+    if (visibleIds.length > 0) {
+      chatsQuery = chatsQuery.in("user_id", visibleIds);
+    }
+
+    const { data: chats, error: chatError } = await chatsQuery;
 
     if (chatError) {
       return NextResponse.json({ error: chatError.message }, { status: 500 });

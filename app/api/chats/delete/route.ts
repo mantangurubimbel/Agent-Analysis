@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { getVisibleUserIds } from "@/lib/hierarchy";
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
     // Hanya admin/supervisor yang bisa delete
     if (user.role !== "admin" && user.role !== "supervisor") {
       return NextResponse.json(
-        { error: "Hanya admin yang bisa menghapus chat" },
+        { error: "Hanya admin/supervisor yang bisa menghapus chat" },
         { status: 403 }
       );
     }
@@ -26,8 +27,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "chatId required" }, { status: 400 });
     }
 
+    const visibleIds = await getVisibleUserIds(user);
+    let chatQuery = supabase
+      .from("chats")
+      .select("chat_id, user_id")
+      .eq("chat_id", chatId)
+      .is("deleted_at", null);
+    if (visibleIds.length > 0) {
+      chatQuery = chatQuery.in("user_id", visibleIds);
+    }
+
+    const { data: chat, error: chatError } = await chatQuery.maybeSingle();
+    if (chatError || !chat) {
+      return NextResponse.json({ error: "Chat tidak ditemukan" }, { status: 404 });
+    }
+
     // Soft delete: set deleted_at, deleted_by, delete_reason
-    const { error } = await supabase
+    let deleteQuery = supabase
       .from("chats")
       .update({
         deleted_at: new Date().toISOString(),
@@ -36,6 +52,11 @@ export async function POST(request: Request) {
       })
       .eq("chat_id", chatId)
       .is("deleted_at", null);
+    if (visibleIds.length > 0) {
+      deleteQuery = deleteQuery.in("user_id", visibleIds);
+    }
+
+    const { error } = await deleteQuery;
 
     if (error) {
       console.error("Error deleting chat:", error);

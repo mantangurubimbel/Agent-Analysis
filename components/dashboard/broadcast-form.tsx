@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Loader2,
@@ -8,10 +8,8 @@ import {
   Users,
   AlertCircle,
   CheckCircle2,
-  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface PreviewData {
@@ -59,15 +57,7 @@ export function BroadcastForm() {
       .catch(() => {});
   }, []);
 
-  // Fetch preview saat filter berubah
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadPreview();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [filterRole, filterTeam, filterActive]);
-
-  async function loadPreview() {
+  const loadPreview = useCallback(async () => {
     setLoadingPreview(true);
     setError(null);
 
@@ -90,7 +80,15 @@ export function BroadcastForm() {
     } finally {
       setLoadingPreview(false);
     }
-  }
+  }, [filterActive, filterRole, filterTeam]);
+
+  // Fetch preview saat filter berubah
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadPreview();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [filterRole, filterTeam, filterActive, loadPreview]);
 
   async function handleSend() {
     if (!message.trim() || message.trim().length < 5) {

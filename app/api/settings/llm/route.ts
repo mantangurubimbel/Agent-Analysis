@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  DEFAULT_LLM_FALLBACK_ORDER,
+  normalizeLlmFallbackOrder,
+} from "@/lib/llm";
+
+function parseFallbackOrder(value: string | undefined): string[] {
+  if (!value) return [...DEFAULT_LLM_FALLBACK_ORDER];
+  try {
+    return normalizeLlmFallbackOrder(JSON.parse(value));
+  } catch {
+    return [...DEFAULT_LLM_FALLBACK_ORDER];
+  }
+}
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -27,9 +40,7 @@ export async function GET() {
 
   const config = {
     active_provider: settings["llm.active_provider"] || "groq",
-    fallback_order: JSON.parse(
-      settings["llm.fallback_order"] || '["groq","gemini","openrouter"]'
-    ),
+    fallback_order: parseFallbackOrder(settings["llm.fallback_order"]),
     max_tokens: parseInt(settings["llm.max_tokens"] || "2500"),
     temperature: parseFloat(settings["llm.temperature"] || "1.0"),
     providers: {
@@ -75,7 +86,7 @@ export async function POST(request: Request) {
   if (body.fallback_order) {
     updates.push({
       key: "llm.fallback_order",
-      value: JSON.stringify(body.fallback_order),
+      value: JSON.stringify(normalizeLlmFallbackOrder(body.fallback_order)),
     });
   }
 

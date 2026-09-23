@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   // Test dengan request kecil
   try {
     let url = "";
-    let headers: Record<string, string> = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
     let bodyReq: Record<string, unknown> = {};

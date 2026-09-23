@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { TeamStats } from "@/lib/supabase/queries";
+import type { TooltipPayloadEntry, TooltipValueType } from "recharts";
 
 const CHART_COLORS = [
   "var(--chart-primary)",
@@ -90,10 +91,17 @@ export function TeamChart({ data }: { data: TeamStats[] }) {
                 itemStyle={{
                   color: "var(--text-secondary)",
                 }}
-                formatter={(value: any, name: any, props: any) => [
-                  `${value}% (${props.payload.total} chat)`,
-                  "Closing Rate",
-                ]}
+                formatter={(
+                  value: TooltipValueType | undefined,
+                  _name: string | number | undefined,
+                  item: TooltipPayloadEntry
+                ) => {
+                  const payload = item.payload as { total: number };
+                  return [
+                    `${value}% (${payload.total} chat)`,
+                    "Closing Rate",
+                  ];
+                }}
                 labelFormatter={(label, payload) =>
                   payload?.[0]?.payload?.fullName || label
                 }

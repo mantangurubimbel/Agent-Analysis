@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { getTodayRangeUtc } from "@/lib/timezone";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -94,20 +95,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ success: true, updated: updates.length });
-}
-
-function getTodayRangeUtc(): { startUtc: string; endUtc: string } {
-  const nowWib = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
-  );
-  const startWib = new Date(nowWib);
-  startWib.setHours(0, 0, 0, 0);
-  const endWib = new Date(startWib);
-  endWib.setDate(endWib.getDate() + 1);
-
-  const offsetMs = 7 * 60 * 60 * 1000;
-  const startUtc = new Date(startWib.getTime() - offsetMs).toISOString();
-  const endUtc = new Date(endWib.getTime() - offsetMs).toISOString();
-
-  return { startUtc, endUtc };
 }

@@ -54,6 +54,18 @@ export async function getVisibleUserIds(user: User): Promise<number[]> {
 }
 
 /**
+ * Cek apakah user boleh mengakses data milik user lain.
+ * Admin memakai scope global yang direpresentasikan dengan array kosong.
+ */
+export async function canAccessUserId(
+  user: User,
+  targetUserId: number,
+): Promise<boolean> {
+  const visibleIds = await getVisibleUserIds(user);
+  return visibleIds.length === 0 || visibleIds.includes(targetUserId);
+}
+
+/**
  * Ambil struktur tim lengkap (untuk halaman Team).
  */
 export async function getTeamStructure(user: User): Promise<TeamStructure> {

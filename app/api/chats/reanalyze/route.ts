@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { getVisibleUserIds } from "@/lib/hierarchy";
 
 export async function POST(request: Request) {
   try {
@@ -25,13 +26,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "chat_id required" }, { status: 400 });
     }
 
+    const visibleIds = await getVisibleUserIds(user);
+
     // Cek chat ada & status fail
-    const { data: chat, error: chatError } = await supabase
+    let chatQuery = supabase
       .from("chats")
-      .select("chat_id, outcome, agent_score, root_cause, analysis_json")
+      .select("chat_id, user_id, outcome, agent_score, root_cause, analysis_json")
       .eq("chat_id", chat_id)
-      .is("deleted_at", null)
-      .single();
+      .is("deleted_at", null);
+    if (visibleIds.length > 0) {
+      chatQuery = chatQuery.in("user_id", visibleIds);
+    }
+
+    const { data: chat, error: chatError } = await chatQuery.single();
 
     if (chatError || !chat) {
       return NextResponse.json(

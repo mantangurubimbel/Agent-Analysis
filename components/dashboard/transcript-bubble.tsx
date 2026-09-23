@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { Transcript, TranscriptMessage } from "@/types/database";
 import type { Highlight } from "@/lib/highlight";
+import { formatWibLocalDateTime } from "@/lib/timezone";
 
 interface TranscriptBubbleProps {
   transcript: Transcript;
@@ -13,8 +14,7 @@ interface TranscriptBubbleProps {
 }
 
 function formatTime(isoString: string): string {
-  const d = new Date(isoString);
-  return d.toLocaleString("id-ID", {
+  return formatWibLocalDateTime(isoString, {
     day: "2-digit",
     month: "short",
     hour: "2-digit",

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Loader2, History, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatWibDateTime } from "@/lib/timezone";
 
 interface Broadcast {
   id: number;
@@ -20,13 +21,6 @@ export function BroadcastHistory() {
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadHistory();
-    // Auto-refresh setiap 5 detik
-    const interval = setInterval(loadHistory, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
   async function loadHistory() {
     try {
       const res = await fetch("/api/broadcast/list?limit=10");
@@ -38,6 +32,16 @@ export function BroadcastHistory() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    const initialLoad = setTimeout(() => void loadHistory(), 0);
+    // Auto-refresh setiap 5 detik
+    const interval = setInterval(loadHistory, 5000);
+    return () => {
+      clearTimeout(initialLoad);
+      clearInterval(interval);
+    };
+  }, []);
 
   function getStatusIcon(status: string) {
     if (status === "completed") return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
@@ -103,7 +107,7 @@ export function BroadcastHistory() {
                 </div>
 
                 <p className="text-xs text-[var(--text-muted)]">
-                  {new Date(b.created_at).toLocaleString("id-ID", {
+                  {formatWibDateTime(b.created_at, {
                     day: "2-digit",
                     month: "short",
                     hour: "2-digit",

@@ -36,11 +36,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     resolveIsDark(getInitialTheme()) ? "dark" : "light"
   );
 
+  function setTheme(theme: Theme) {
+    setThemeState(theme);
+    setResolvedTheme(resolveIsDark(theme) ? "dark" : "light");
+  }
+
   // Apply theme ke DOM setiap kali berubah
   React.useEffect(() => {
     const isDark = resolveIsDark(theme);
     document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
-    setResolvedTheme(isDark ? "dark" : "light");
     try {
       localStorage.setItem("theme", theme);
     } catch {}
@@ -61,7 +65,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider
-      value={{ theme, resolvedTheme, setTheme: setThemeState }}
+      value={{ theme, resolvedTheme, setTheme }}
     >
       {children}
     </ThemeContext.Provider>

@@ -15,6 +15,7 @@ import { ObjectionChart } from "@/components/dashboard/objection-chart";
 import { ObjectionRateChart } from "@/components/dashboard/objection-rate-chart";
 import { TeamChart } from "@/components/dashboard/team-chart";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
+import { formatWibDateTime } from "@/lib/timezone";
 
 const outcomeMeta = {
   closed: {
@@ -153,7 +154,11 @@ export default async function DashboardPage({
                     </div>
                     <p className="text-xs text-[var(--text-muted)] mt-1">
                       {chat.agent_name} • {chat.total_messages} pesan •{" "}
-                      {new Date(chat.created_at).toLocaleDateString("id-ID")}
+                      {formatWibDateTime(chat.created_at, {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
                     </p>
                   </div>
                   <div className="text-right ml-4">

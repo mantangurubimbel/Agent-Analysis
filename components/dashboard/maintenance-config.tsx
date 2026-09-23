@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Save, AlertTriangle, Wrench } from "lucide-react";
+import { Loader2, Save, Wrench } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,10 +22,6 @@ export function MaintenanceConfig() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadConfig();
-  }, []);
-
   async function loadConfig() {
     setLoading(true);
     try {
@@ -39,6 +35,11 @@ export function MaintenanceConfig() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    const timer = setTimeout(() => void loadConfig(), 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   async function handleSave() {
     if (!config) return;

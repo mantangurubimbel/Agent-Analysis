@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { getVisibleUserIds } from "@/lib/hierarchy";
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
 
     if (user.role !== "admin" && user.role !== "supervisor") {
       return NextResponse.json(
-        { error: "Hanya admin yang bisa menghapus chat" },
+        { error: "Hanya admin/supervisor yang bisa menghapus chat" },
         { status: 403 }
       );
     }
@@ -29,12 +30,19 @@ export async function POST(request: Request) {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
 
+    const visibleIds = await getVisibleUserIds(user);
+
     // Preview: hitung berapa chat yang akan dihapus
-    const { count, error: countError } = await supabase
+    let countQuery = supabase
       .from("chats")
       .select("*", { count: "exact", head: true })
       .is("deleted_at", null)
       .lt("created_at", cutoff.toISOString());
+    if (visibleIds.length > 0) {
+      countQuery = countQuery.in("user_id", visibleIds);
+    }
+
+    const { count, error: countError } = await countQuery;
 
     if (countError) {
       return NextResponse.json({ error: countError.message }, { status: 500 });
@@ -48,7 +56,7 @@ export async function POST(request: Request) {
     }
 
     // Soft delete semua yang lebih tua dari cutoff
-    const { error } = await supabase
+    let deleteQuery = supabase
       .from("chats")
       .update({
         deleted_at: new Date().toISOString(),
@@ -57,6 +65,11 @@ export async function POST(request: Request) {
       })
       .is("deleted_at", null)
       .lt("created_at", cutoff.toISOString());
+    if (visibleIds.length > 0) {
+      deleteQuery = deleteQuery.in("user_id", visibleIds);
+    }
+
+    const { error } = await deleteQuery;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
