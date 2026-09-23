@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Loader2,
@@ -24,21 +24,122 @@ interface PreviewData {
 
 interface TeamsResponse {
   teams: string[];
+  roles: string[];
 }
 
 const ROLE_OPTIONS = [
-  { value: "all", label: "Semua Role" },
   { value: "agent", label: "💼 Agent" },
   { value: "leader", label: "🎯 Leader" },
   { value: "supervisor", label: "🔍 Supervisor" },
   { value: "admin", label: "👑 Admin" },
 ];
 
+interface MultiSelectOption {
+  value: string;
+  label: string;
+}
+
+function MultiSelectFilter({
+  options,
+  values,
+  onChange,
+  placeholder,
+}: {
+  options: MultiSelectOption[];
+  values: string[];
+  onChange: (values: string[]) => void;
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [open]);
+
+  const selectedLabels = options
+    .filter((option) => values.includes(option.value))
+    .map((option) => option.label);
+  const buttonLabel =
+    values.length === 0
+      ? placeholder
+      : values.length === 1
+        ? selectedLabels[0]
+        : `${values.length} pilihan dipilih`;
+
+  function toggleValue(value: string) {
+    onChange(
+      values.includes(value)
+        ? values.filter((item) => item !== value)
+        : [...values, value]
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-sm rounded-md border bg-[var(--surface)] border-[var(--border)] text-[var(--text-primary)] text-left"
+      >
+        <span className="truncate">{buttonLabel}</span>
+        <span className="text-[var(--text-muted)]">▾</span>
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-multiselectable="true"
+          className="absolute left-0 right-0 z-20 mt-1 max-h-60 overflow-y-auto rounded-md border border-[var(--border)] bg-[var(--surface)] p-1 shadow-lg"
+        >
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="w-full rounded px-2 py-1.5 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+          >
+            Semua
+          </button>
+          {options.map((option) => {
+            const checked = values.includes(option.value);
+            return (
+              <div
+                key={option.value}
+                role="option"
+                aria-selected={checked}
+                onClick={() => toggleValue(option.value)}
+                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  readOnly
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="rounded"
+                />
+                <span>{option.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function BroadcastForm() {
   const router = useRouter();
   const [message, setMessage] = useState("");
-  const [filterRole, setFilterRole] = useState("all");
-  const [filterTeam, setFilterTeam] = useState("all");
+  const [filterRoles, setFilterRoles] = useState<string[]>([]);
+  const [filterTeams, setFilterTeams] = useState<string[]>([]);
   const [filterActive, setFilterActive] = useState(true);
 
   const [preview, setPreview] = useState<PreviewData | null>(null);
@@ -48,12 +149,17 @@ export function BroadcastForm() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [teams, setTeams] = useState<string[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
   // Load teams
   useEffect(() => {
     fetch("/api/broadcast/teams")
       .then((r) => r.json())
-      .then((d: TeamsResponse) => setTeams(d.teams ?? []))
+      .then((d: TeamsResponse) => {
+        setTeams(d.teams ?? []);
+        setAvailableRoles(d.roles ?? []);
+        setFilterRoles((current) => current.filter((role) => (d.roles ?? []).includes(role)));
+      })
       .catch(() => {});
   }, []);
 
@@ -66,8 +172,8 @@ export function BroadcastForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          filter_role: filterRole,
-          filter_team: filterTeam,
+          filter_role: filterRoles,
+          filter_team: filterTeams,
           filter_active: filterActive,
         }),
       });
@@ -80,7 +186,7 @@ export function BroadcastForm() {
     } finally {
       setLoadingPreview(false);
     }
-  }, [filterActive, filterRole, filterTeam]);
+  }, [filterActive, filterRoles, filterTeams]);
 
   // Fetch preview saat filter berubah
   useEffect(() => {
@@ -88,7 +194,7 @@ export function BroadcastForm() {
       void loadPreview();
     }, 300);
     return () => clearTimeout(timer);
-  }, [filterRole, filterTeam, filterActive, loadPreview]);
+  }, [filterActive, filterRoles, filterTeams, loadPreview]);
 
   async function handleSend() {
     if (!message.trim() || message.trim().length < 5) {
@@ -103,8 +209,8 @@ export function BroadcastForm() {
 
     const confirmed = confirm(
       `Kirim pesan ke ${preview.count} user?\n\n` +
-        `Role: ${filterRole}\n` +
-        `Team: ${filterTeam}\n\n` +
+        `Role: ${filterRoles.length ? filterRoles.join(", ") : "Semua"}\n` +
+        `Team: ${filterTeams.length ? filterTeams.join(", ") : "Semua"}\n\n` +
         `Pesan tidak bisa dibatalkan setelah terkirim.`
     );
 
@@ -120,8 +226,8 @@ export function BroadcastForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: message.trim(),
-          filter_role: filterRole,
-          filter_team: filterTeam,
+          filter_role: filterRoles,
+          filter_team: filterTeams,
           filter_active: filterActive,
         }),
       });
@@ -203,30 +309,19 @@ export function BroadcastForm() {
         <div>
           <Label>🎯 Filter Penerima</Label>
           <div className="grid grid-cols-2 gap-3 mt-1.5">
-            <select
-              value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
-              className="px-3 py-2 text-sm rounded-md border bg-[var(--surface)] border-[var(--border)] text-[var(--text-primary)]"
-            >
-              {ROLE_OPTIONS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
+            <MultiSelectFilter
+              options={ROLE_OPTIONS.filter((option) => availableRoles.includes(option.value))}
+              values={filterRoles}
+              onChange={setFilterRoles}
+              placeholder="Semua Role"
+            />
 
-            <select
-              value={filterTeam}
-              onChange={(e) => setFilterTeam(e.target.value)}
-              className="px-3 py-2 text-sm rounded-md border bg-[var(--surface)] border-[var(--border)] text-[var(--text-primary)]"
-            >
-              <option value="all">Semua Team</option>
-              {teams.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+            <MultiSelectFilter
+              options={teams.map((team) => ({ value: team, label: team }))}
+              values={filterTeams}
+              onChange={setFilterTeams}
+              placeholder="Semua Team"
+            />
           </div>
 
           <div className="flex items-center gap-2 mt-2">

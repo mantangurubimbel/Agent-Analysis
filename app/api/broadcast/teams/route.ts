@@ -1,33 +1,20 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { canManageBroadcast, getBroadcastScope } from "@/lib/broadcast-access";
 
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user || !["admin", "supervisor"].includes(user.role)) {
+  if (!user || !canManageBroadcast(user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("users")
-    .select("team")
-    .not("team", "is", null)
-    .eq("is_active", true);
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    const supabase = await createClient();
+    const scope = await getBroadcastScope(supabase, user);
+    return NextResponse.json({ teams: scope.teams, roles: scope.allowedRoles });
+  } catch (error) {
+    console.error("Gagal mengambil cakupan broadcast:", error);
+    return NextResponse.json({ error: "Gagal mengambil cakupan broadcast" }, { status: 500 });
   }
-
-  // Ambil unique team
-  const teamsSet = new Set<string>();
-  for (const row of data ?? []) {
-    if (row.team && row.team.trim()) {
-      teamsSet.add(row.team.trim());
-    }
-  }
-
-  const teams = Array.from(teamsSet).sort();
-
-  return NextResponse.json({ teams });
 }

@@ -49,7 +49,7 @@ const navGroups: NavGroup[] = [
         href: "/dashboard/broadcast",
         label: "Broadcast",
         icon: Megaphone,
-        roles: ["admin", "supervisor"],
+        roles: ["admin", "leader", "supervisor"],
       },
     ],
   },

@@ -7,8 +7,8 @@ export default async function BroadcastPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  // Hanya admin & supervisor
-  if (!["admin", "supervisor"].includes(user.role)) {
+  // Hanya admin, supervisor, dan leader
+  if (!["admin", "supervisor", "leader"].includes(user.role)) {
     redirect("/dashboard");
   }
 
