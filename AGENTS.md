@@ -11,7 +11,7 @@ Frontend Next.js untuk dashboard analisis sales WhatsApp tim Ruangguru.
 - Auth dan database: Supabase Google OAuth + PostgreSQL.
 - Deployment: Vercel, auto-deploy dari GitHub.
 - Live: https://agentanalysisweb.vercel.app
-- Audit dokumentasi: 23 September 2026.
+- Audit dokumentasi: 24 September 2026.
 
 ## Aturan Wajib
 
@@ -130,7 +130,19 @@ API route tetap wajib melakukan authorization sendiri; pembatasan menu di UI buk
 - Leaderboard dan Team Saya.
 - Manage Users: CRUD, tree hierarki, toggle `is_active`, dan counter upload.
 - Settings: LLM, Analysis, Profile, Maintenance, dan Upload Limit.
-- Broadcast: preview, pilih role/team, kirim, dan riwayat.
+- Broadcast: preview, multi-select role/team, kirim, dan riwayat sesuai cakupan hierarki.
+- Broadcast gagal: detail penerima gagal dan retry melalui `/api/broadcast/[id]/failed`.
+
+### Broadcast dan cakupan hierarki
+
+- `admin` dapat memilih semua role dan team.
+- `supervisor` hanya dapat memilih `leader` dan `agent` dalam struktur bawahannya.
+- `leader` hanya dapat memilih `agent` yang memiliki `leader_id`-nya.
+- History `admin` menampilkan semua broadcast.
+- History `supervisor` menampilkan broadcast miliknya sendiri dan bawahannya.
+- History `leader` hanya menampilkan broadcast yang dibuatnya sendiri.
+- Pembatasan di UI bukan security boundary; endpoint preview, send, teams, list,
+  detail gagal, dan retry wajib tetap memvalidasi user serta cakupan hierarki di server.
 - Login Google multi-akun serta dark/light mode.
 
 ## Upload Limit
@@ -157,7 +169,8 @@ Belum tersedia di frontend:
 
 - `POST /api/auth/callback` — callback OAuth melalui route GET.
 - `/api/chats/*` — delete, bulk delete, re-analyze, dan bulk re-analyze.
-- `/api/broadcast/*` — preview, send, list, teams.
+- `/api/broadcast/*` — preview, send, list, teams, dan detail/retry penerima gagal.
+- `/api/broadcast/[id]/failed` — GET detail penerima gagal atau POST retry broadcast.
 - `/api/settings/llm` dan `/api/settings/llm/test` — konfigurasi/test LLM.
 - `/api/settings/analysis` — konfigurasi analisis.
 - `/api/settings/maintenance` — maintenance mode.

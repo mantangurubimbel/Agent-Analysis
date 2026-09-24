@@ -6,11 +6,14 @@ Semua perubahan penting di dashboard frontend.
 
 ### Changed
 
-- Dokumentasi diselaraskan dengan source code per 23 September 2026.
+- Dokumentasi diselaraskan dengan source code per 24 September 2026.
 - `proxy.ts` dicatat sebagai entry middleware Next.js 16.
 - Status upload limit, broadcast, re-analyze, maintenance, chart analitik, dan auth multi-akun diperjelas.
 - Helper timezone frontend dipusatkan agar query, API route, dan tampilan timestamp konsisten dengan UTC database dan WIB.
 - Contoh credential nyata di dokumentasi dihapus; environment production harus diatur melalui Vercel.
+- Broadcast mendukung multi-select role/team dengan pembatasan berdasarkan hierarki user.
+- History broadcast dibatasi sesuai cakupan pengirim; supervisor mencakup bawahannya.
+- Detail penerima gagal dan retry broadcast tersedia untuk admin, supervisor, dan leader sesuai cakupan.
 
 ### Known technical debt
 

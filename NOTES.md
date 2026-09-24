@@ -1,6 +1,6 @@
 # NOTES.md — Status Pengembangan
 
-Catatan pickup untuk sesi AI berikutnya. Status ini diaudit pada 23 September 2026.
+Catatan pickup untuk sesi AI berikutnya. Status ini diaudit pada 24 September 2026.
 
 ## Status fitur terakhir
 
@@ -27,6 +27,19 @@ Backend dan dashboard sudah memiliki fitur upload limit harian yang membaca sumb
 - Query dan tampilan timestamp database menggunakan helper terpusat di `lib/timezone.ts`.
 - `proxy.ts` adalah wrapper middleware Next.js 16 yang aktif.
 - Overview sudah memiliki date range, trend chat, objection rate, dan team comparison.
+
+### Broadcast
+
+- Form broadcast memakai multi-select role dan team.
+- Admin dapat memilih semua role/team.
+- Supervisor hanya dapat memilih leader dan agent dalam struktur bawahannya.
+- Leader hanya dapat memilih agent di bawahnya.
+- Preview dan send memvalidasi cakupan hierarki di server.
+- History supervisor menampilkan broadcast dirinya sendiri dan bawahannya.
+- History leader hanya menampilkan broadcast miliknya sendiri.
+- Detail penerima gagal tersedia melalui `/api/broadcast/{id}/failed`.
+- Retry membuat broadcast baru dan tidak mengubah audit broadcast lama.
+- Retry dapat gagal kembali jika penyebab awal adalah format HTML Telegram yang invalid.
 
 ## Keputusan yang berlaku
 
@@ -87,6 +100,9 @@ npm run build
 ```
 
 Untuk perubahan upload limit, verifikasi kedua sisi membaca setting dan rentang waktu yang sama. Untuk perubahan auth/API, verifikasi role admin, supervisor, leader, agent, user inactive, dan user yang belum terdaftar.
+
+Untuk perubahan broadcast, verifikasi role admin, supervisor, leader, cakupan team,
+history pengirim, detail penerima gagal, dan retry broadcast.
 
 ## Backup dokumentasi
 

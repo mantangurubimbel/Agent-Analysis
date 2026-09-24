@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { UserFormDialog } from "./user-form-dialog";
 import { ActiveToggle } from "./active-toggle";
+import { DeleteUserButton } from "./delete-user-button";
 import type { User } from "@/types/database";
 
 const roleEmoji = {
@@ -36,10 +37,12 @@ export function UserTree({
 }: UserTreeProps) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
-  const admins = users.filter((u) => u.role === "admin");
-  const supervisors = users.filter((u) => u.role === "supervisor");
-  const leaders = users.filter((u) => u.role === "leader");
-  const agents = users.filter((u) => u.role === "agent");
+  const activeUsers = users.filter((u) => u.is_active !== false);
+  const inactiveUsers = users.filter((u) => u.is_active === false);
+  const admins = activeUsers.filter((u) => u.role === "admin");
+  const supervisors = activeUsers.filter((u) => u.role === "supervisor");
+  const leaders = activeUsers.filter((u) => u.role === "leader");
+  const agents = activeUsers.filter((u) => u.role === "agent");
 
   const toggleExpand = (id: number) => {
     const newSet = new Set(expanded);
@@ -56,7 +59,7 @@ export function UserTree({
   const sharedProps = { users, uploadCounts, uploadLimit };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
       {admins.map((admin) => (
         <div key={admin.id} className="space-y-2">
           <UserRow
@@ -97,7 +100,11 @@ export function UserTree({
               ))}
 
               {leaders
-                .filter((l) => !l.supervisor_id)
+                .filter(
+                  (leader) =>
+                    !leader.supervisor_id ||
+                    !supervisors.some((supervisor) => supervisor.id === leader.supervisor_id)
+                )
                 .map((leader) => (
                   <LeaderNode
                     key={leader.id}
@@ -110,7 +117,11 @@ export function UserTree({
                 ))}
 
               {agents
-                .filter((a) => !a.leader_id)
+                .filter(
+                  (agent) =>
+                    !agent.leader_id ||
+                    !leaders.some((leader) => leader.id === agent.leader_id)
+                )
                 .map((agent) => (
                   <UserRow
                     {...sharedProps}
@@ -138,7 +149,7 @@ export function UserTree({
               {isExpanded(sup.id) && (
                 <div className="ml-8 space-y-2">
                   {leaders
-                    .filter((l) => l.supervisor_id === sup.id)
+                    .filter((leader) => leader.supervisor_id === sup.id)
                     .map((leader) => (
                       <LeaderNode
                         key={leader.id}
@@ -154,6 +165,36 @@ export function UserTree({
             </div>
           ))}
         </div>
+      )}
+
+      {inactiveUsers.length > 0 && (
+        <section className="rounded-xl border border-rose-200 bg-rose-50/50 p-4 dark:border-rose-900/60 dark:bg-rose-950/10">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-[var(--text-primary)]">User Nonaktif</h2>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                User tidak dapat login atau upload, tetapi riwayat datanya tetap tersimpan.
+              </p>
+            </div>
+            <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+              {inactiveUsers.length} user
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {inactiveUsers.map((inactiveUser) => (
+              <UserRow
+                key={inactiveUser.id}
+                {...sharedProps}
+                user={inactiveUser}
+                isExpanded={false}
+                onToggle={() => {}}
+                showSubordinates={false}
+                showDelete
+              />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );
@@ -215,6 +256,8 @@ function UserRow({
   uploadLimit,
   isExpanded,
   onToggle,
+  showSubordinates = true,
+  showDelete = false,
 }: {
   user: User;
   users: User[];
@@ -222,6 +265,8 @@ function UserRow({
   uploadLimit: number | null;
   isExpanded: boolean;
   onToggle: () => void;
+  showSubordinates?: boolean;
+  showDelete?: boolean;
 }) {
   const emoji = roleEmoji[user.role as keyof typeof roleEmoji] ?? "👤";
   const colorClass =
@@ -229,7 +274,7 @@ function UserRow({
   const isInactive = user.is_active === false;
 
   const subCount = getSubordinateCount(user, users);
-  const hasSubs = subCount > 0;
+  const hasSubs = showSubordinates && subCount > 0;
 
   // Counter upload (hanya untuk agent & kalau limit aktif)
   const showUploadCounter =
@@ -299,12 +344,16 @@ function UserRow({
           )}
 
           <ActiveToggle
+            key={`${user.id}-${isInactive ? "inactive" : "active"}`}
             userId={user.id}
             userName={user.full_name}
             isActive={user.is_active !== false}
           />
 
           <UserFormDialog mode="edit" user={user} allUsers={users} />
+          {showDelete && (
+            <DeleteUserButton userId={user.id} userName={user.full_name} />
+          )}
         </div>
       </div>
     </div>
@@ -312,19 +361,20 @@ function UserRow({
 }
 
 function getSubordinateCount(user: User, users: User[]): number {
+  const activeUsers = users.filter((candidate) => candidate.is_active !== false);
   if (user.role === "supervisor") {
-    const leaders = users.filter((u) => u.supervisor_id === user.id);
+    const leaders = activeUsers.filter((u) => u.supervisor_id === user.id);
     const leaderIds = leaders.map((l) => l.id);
-    const agents = users.filter(
+    const agents = activeUsers.filter(
       (u) => u.leader_id && leaderIds.includes(u.leader_id)
     );
     return leaders.length + agents.length;
   }
   if (user.role === "leader") {
-    return users.filter((u) => u.leader_id === user.id).length;
+    return activeUsers.filter((u) => u.leader_id === user.id).length;
   }
   if (user.role === "admin") {
-    return users.length - 1;
+    return activeUsers.length - 1;
   }
   return 0;
 }

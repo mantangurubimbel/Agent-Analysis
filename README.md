@@ -4,7 +4,7 @@ Dashboard Next.js untuk tim leader, supervisor, admin, dan agent dalam melihat a
 
 Live: https://agentanalysisweb.vercel.app
 
-Status dokumentasi: diperbarui berdasarkan source code per 23 September 2026.
+Status dokumentasi: diperbarui berdasarkan source code per 24 September 2026.
 
 ## Fitur
 
@@ -16,7 +16,8 @@ Status dokumentasi: diperbarui berdasarkan source code per 23 September 2026.
 - Leaderboard dan Team Saya.
 - Settings: LLM, Analysis, Profile, Maintenance, dan Upload Limit.
 - Manage Users: CRUD, tree hierarki, toggle `is_active`, dan counter upload.
-- Broadcast Telegram: preview, kirim, filter role/team, dan history.
+- Broadcast Telegram: preview, multi-select role/team, filtering hierarki, kirim,
+  history sesuai cakupan user, detail penerima gagal, dan retry.
 - Dark/light mode dengan custom ThemeProvider.
 
 ## Tech stack
@@ -99,6 +100,27 @@ API:
 - `POST /api/settings/upload-limit` — ubah enabled/default limit.
 
 Backend Telegram dan frontend menggunakan `app_settings` serta `upload_logs` yang sama. Reset harian memakai WIB, dengan timestamp database tetap UTC. Frontend belum memiliki chart trending upload 7 hari, per-agent override, atau export CSV.
+
+## Broadcast
+
+Broadcast menggunakan filter role dan team multi-select yang dibatasi berdasarkan user login:
+
+- Admin dapat memilih semua role dan team.
+- Supervisor hanya melihat role `leader` dan `agent`, serta team dalam struktur bawahannya.
+- Leader hanya melihat role `agent`, serta team agent di bawahnya.
+- History supervisor mencakup broadcast dirinya sendiri dan bawahannya.
+- History leader hanya mencakup broadcast miliknya sendiri.
+- Penerima gagal dapat dilihat melalui tombol `Lihat Gagal` dan dijadwalkan ulang melalui
+  tombol `Kirim Ulang yang Gagal`.
+
+Endpoint detail dan retry:
+
+```text
+GET /api/broadcast/{id}/failed
+POST /api/broadcast/{id}/failed
+```
+
+Retry membuat record broadcast baru sehingga audit broadcast sebelumnya tetap tersimpan.
 
 ## Design system
 
