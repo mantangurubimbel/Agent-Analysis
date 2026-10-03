@@ -17,7 +17,8 @@ Status dokumentasi: diperbarui berdasarkan source code per 24 September 2026.
 - Settings: LLM, Analysis, Profile, Maintenance, dan Upload Limit.
 - Manage Users: CRUD, tree hierarki, toggle `is_active`, dan counter upload.
 - Broadcast Telegram: preview, multi-select role/team, filtering hierarki, kirim,
-  history sesuai cakupan user, detail penerima gagal, dan retry.
+  history sesuai cakupan user, detail penerima gagal, retry, serta scheduled broadcast
+  sekali jalan/harian/mingguan.
 - Dark/light mode dengan custom ThemeProvider.
 
 ## Tech stack
@@ -121,6 +122,12 @@ POST /api/broadcast/{id}/failed
 ```
 
 Retry membuat record broadcast baru sehingga audit broadcast sebelumnya tetap tersimpan.
+
+Scheduled broadcast dibuat dari card `Jadwal Broadcast` di `/dashboard/broadcast`.
+Tanggal dan jam pada UI menggunakan WIB; worker backend akan menghitung ulang recipient
+sesuai hierarki sender setiap eksekusi dan otomatis memasukkan sender sebagai recipient.
+Jadwal sekali jalan menjadi nonaktif setelah dibuat ke queue, sedangkan jadwal harian dan
+mingguan maju ke slot berikutnya sampai tanggal berakhir atau dinonaktifkan.
 
 ## Design system
 

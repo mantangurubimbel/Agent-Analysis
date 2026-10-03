@@ -131,6 +131,7 @@ API route tetap wajib melakukan authorization sendiri; pembatasan menu di UI buk
 - Manage Users: CRUD, tree hierarki, toggle `is_active`, dan counter upload.
 - Settings: LLM, Analysis, Profile, Maintenance, dan Upload Limit.
 - Broadcast: preview, multi-select role/team, kirim, dan riwayat sesuai cakupan hierarki.
+- Scheduled broadcast: sekali jalan, harian, mingguan, aktif/nonaktif, hapus, dan riwayat eksekusi.
 - Broadcast gagal: detail penerima gagal dan retry melalui `/api/broadcast/[id]/failed`.
 
 ### Broadcast dan cakupan hierarki
@@ -170,6 +171,8 @@ Belum tersedia di frontend:
 - `POST /api/auth/callback` — callback OAuth melalui route GET.
 - `/api/chats/*` — delete, bulk delete, re-analyze, dan bulk re-analyze.
 - `/api/broadcast/*` — preview, send, list, teams, dan detail/retry penerima gagal.
+- `/api/broadcast/schedules` — list, buat, aktif/nonaktifkan, dan hapus jadwal broadcast.
+- `/api/broadcast/schedules/{id}/runs` — riwayat eksekusi jadwal.
 - `/api/broadcast/[id]/failed` — GET detail penerima gagal atau POST retry broadcast.
 - `/api/settings/llm` dan `/api/settings/llm/test` — konfigurasi/test LLM.
 - `/api/settings/analysis` — konfigurasi analisis.

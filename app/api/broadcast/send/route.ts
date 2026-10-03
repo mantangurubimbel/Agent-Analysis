@@ -24,6 +24,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!Number.isInteger(user.telegram_id) || user.telegram_id <= 0) {
+      return NextResponse.json(
+        { error: "Telegram ID sender belum valid" },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const { message, filter_active } = body;
     const filterRoles = normalizeFilterValues(body.filter_role);
@@ -84,7 +91,19 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!recipients || recipients.length === 0) {
+    const senderRecipient = {
+      id: user.id,
+      telegram_id: user.telegram_id,
+      full_name: user.full_name,
+      role: user.role,
+      team: user.team,
+    };
+    const allRecipients = [
+      senderRecipient,
+      ...(recipients ?? []).filter((recipient) => recipient.id !== user.id),
+    ];
+
+    if (allRecipients.length === 0) {
       return NextResponse.json(
         { error: "Tidak ada penerima yang cocok dengan filter" },
         { status: 400 }
@@ -99,7 +118,7 @@ export async function POST(request: Request) {
         filter_role: filterRoles.length > 0 ? filterRoles.join(",") : null,
         filter_team: filterTeams.length > 0 ? filterTeams.join(",") : null,
         filter_active: filter_active !== false,
-        recipient_count: recipients.length,
+        recipient_count: allRecipients.length,
         sent_by: user.telegram_id,
         status: "pending",
       })
@@ -114,7 +133,7 @@ export async function POST(request: Request) {
     }
 
     // Insert recipients
-    const recipientRows = recipients.map((r) => ({
+    const recipientRows = allRecipients.map((r) => ({
       broadcast_id: broadcast.id,
       user_id: r.id,
       telegram_id: r.telegram_id,
@@ -137,7 +156,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       broadcast_id: broadcast.id,
-      recipient_count: recipients.length,
+      recipient_count: allRecipients.length,
       message: "Broadcast dijadwalkan. Akan diproses oleh bot.",
     });
   } catch (e) {

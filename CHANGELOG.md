@@ -14,6 +14,8 @@ Semua perubahan penting di dashboard frontend.
 - Broadcast mendukung multi-select role/team dengan pembatasan berdasarkan hierarki user.
 - History broadcast dibatasi sesuai cakupan pengirim; supervisor mencakup bawahannya.
 - Detail penerima gagal dan retry broadcast tersedia untuk admin, supervisor, dan leader sesuai cakupan.
+- Scheduled broadcast tersedia untuk mode sekali jalan, harian, dan mingguan dengan kontrol aktif/nonaktif.
+- Scheduled broadcast memakai timezone WIB dan menampilkan creator serta jadwal eksekusi berikutnya.
 
 ### Known technical debt
 

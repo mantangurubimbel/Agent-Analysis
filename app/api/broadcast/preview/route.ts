@@ -16,6 +16,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    if (!Number.isInteger(user.telegram_id) || user.telegram_id <= 0) {
+      return NextResponse.json(
+        { error: "Telegram ID sender belum valid" },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const { filter_active } = body;
     const filterRoles = normalizeFilterValues(body.filter_role);
@@ -53,22 +60,34 @@ export async function POST(request: Request) {
       query = query.eq("is_active", true);
     }
 
-    const { data, count, error } = await query;
+    const { data, error } = await query;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const senderRecipient = {
+      id: user.id,
+      telegram_id: user.telegram_id,
+      full_name: user.full_name,
+      role: user.role,
+      team: user.team,
+    };
+    const recipients = [
+      senderRecipient,
+      ...(data ?? []).filter((recipient) => recipient.id !== user.id),
+    ];
+
     // Group by role untuk info tambahan
     const byRole: Record<string, number> = {};
-    for (const r of data ?? []) {
+    for (const r of recipients) {
       byRole[r.role] = (byRole[r.role] || 0) + 1;
     }
 
     return NextResponse.json({
-      count: count ?? 0,
+      count: recipients.length,
       by_role: byRole,
-      sample: (data ?? []).slice(0, 3).map((r) => ({
+      sample: recipients.slice(0, 3).map((r) => ({
         full_name: r.full_name,
         role: r.role,
         team: r.team,

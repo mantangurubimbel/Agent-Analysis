@@ -35,9 +35,30 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const broadcasts = data ?? [];
+    const senderIds = [...new Set(broadcasts.map((broadcast) => broadcast.sent_by))];
+    const { data: senders, error: senderError } = senderIds.length
+      ? await supabase
+          .from("users")
+          .select("telegram_id, full_name, username, role")
+          .in("telegram_id", senderIds)
+      : { data: [], error: null };
+
+    if (senderError) {
+      console.error("Gagal mengambil sender broadcast:", senderError);
+      return NextResponse.json({ error: "Gagal mengambil informasi sender" }, { status: 500 });
+    }
+
+    const sendersByTelegramId = new Map(
+      (senders ?? []).map((sender) => [sender.telegram_id, sender])
+    );
+
     return NextResponse.json({
-      broadcasts: data ?? [],
-      count: data?.length ?? 0,
+      broadcasts: broadcasts.map((broadcast) => ({
+        ...broadcast,
+        sender: sendersByTelegramId.get(broadcast.sent_by) ?? null,
+      })),
+      count: broadcasts.length,
     });
   } catch (e) {
     console.error("List error:", e);

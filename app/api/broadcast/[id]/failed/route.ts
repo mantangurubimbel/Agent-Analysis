@@ -167,13 +167,22 @@ export async function POST(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Anda tidak dapat mengakses broadcast ini" }, { status: 403 });
     }
 
-    const recipients = failedRecipients ?? [];
-    if (recipients.length === 0) {
+    const failed = failedRecipients ?? [];
+    if (failed.length === 0) {
       return NextResponse.json(
         { error: "Tidak ada penerima gagal yang dapat dikirim ulang" },
         { status: 400 }
       );
     }
+
+    const senderRecipient = {
+      user_id: user!.id,
+      telegram_id: user!.telegram_id,
+    };
+    const recipients = [
+      senderRecipient,
+      ...failed.filter((recipient) => recipient.user_id !== user!.id),
+    ];
 
     const { data: retryBroadcast, error: retryBroadcastError } = await supabase
       .from("broadcasts")

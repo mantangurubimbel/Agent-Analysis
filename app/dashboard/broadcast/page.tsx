@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { getBroadcastScope } from "@/lib/broadcast-access";
 import { BroadcastForm } from "@/components/dashboard/broadcast-form";
 import { BroadcastHistory } from "@/components/dashboard/broadcast-history";
+import { BroadcastScheduleManager } from "@/components/dashboard/broadcast-schedule-manager";
 
 export default async function BroadcastPage() {
   const user = await getCurrentUser();
@@ -11,6 +14,8 @@ export default async function BroadcastPage() {
   if (!["admin", "supervisor", "leader"].includes(user.role)) {
     redirect("/dashboard");
   }
+
+  const scope = await getBroadcastScope(await createClient(), user);
 
   return (
     <div className="space-y-6">
@@ -34,6 +39,8 @@ export default async function BroadcastPage() {
           <BroadcastHistory />
         </div>
       </div>
+
+      <BroadcastScheduleManager teams={scope.teams} roles={scope.allowedRoles} />
     </div>
   );
 }

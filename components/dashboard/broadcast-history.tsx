@@ -32,6 +32,11 @@ interface Broadcast {
   failed_count: number;
   status: string;
   created_at: string;
+  sender: {
+    full_name: string;
+    username: string | null;
+    role: string;
+  } | null;
 }
 
 interface FailedRecipient {
@@ -169,6 +174,12 @@ export function BroadcastHistory() {
 
                 <p className="line-clamp-2 text-xs text-[var(--text-secondary)]">
                   {broadcast.message}
+                </p>
+
+                <p className="text-xs text-[var(--text-muted)]">
+                  📤 Oleh: {broadcast.sender?.full_name ?? "Sender tidak tersedia"}
+                  {broadcast.sender?.username ? ` (@${broadcast.sender.username})` : ""}
+                  {broadcast.sender?.role ? ` · ${broadcast.sender.role}` : ""}
                 </p>
 
                 <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">

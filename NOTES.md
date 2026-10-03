@@ -40,6 +40,9 @@ Backend dan dashboard sudah memiliki fitur upload limit harian yang membaca sumb
 - Detail penerima gagal tersedia melalui `/api/broadcast/{id}/failed`.
 - Retry membuat broadcast baru dan tidak mengubah audit broadcast lama.
 - Retry dapat gagal kembali jika penyebab awal adalah format HTML Telegram yang invalid.
+- Scheduled broadcast tersedia untuk mode sekali jalan, harian, dan mingguan.
+- Card jadwal memakai timezone WIB; backend menghitung ulang recipient saat slot jatuh tempo.
+- Sender otomatis menjadi recipient dan slot eksekusi memakai unique key `(schedule_id, scheduled_for)`.
 
 ## Keputusan yang berlaku
 
@@ -102,7 +105,7 @@ npm run build
 Untuk perubahan upload limit, verifikasi kedua sisi membaca setting dan rentang waktu yang sama. Untuk perubahan auth/API, verifikasi role admin, supervisor, leader, agent, user inactive, dan user yang belum terdaftar.
 
 Untuk perubahan broadcast, verifikasi role admin, supervisor, leader, cakupan team,
-history pengirim, detail penerima gagal, dan retry broadcast.
+history pengirim, detail penerima gagal, retry broadcast, dan scheduled broadcast.
 
 ## Backup dokumentasi
 
