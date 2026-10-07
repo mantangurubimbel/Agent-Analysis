@@ -306,7 +306,7 @@ export function ChatList({
                     : "border-[var(--border)] bg-[var(--surface)]"
                 )}
               >
-                <div className="p-4 flex items-center gap-4">
+                <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
                   <div className="flex-1 min-w-0">
                     <Link href={`/dashboard/chats/${chat.chat_id}`}>
                     <div className="flex items-center gap-2 mb-1.5">
@@ -343,7 +343,7 @@ export function ChatList({
                   </div>
 
                   {!failed && (
-                    <div className="text-center px-4 border-l border-[var(--border)]">
+                    <div className="border-t border-[var(--border)] pt-2 text-left sm:border-l sm:border-t-0 sm:px-4 sm:pt-0 sm:text-center">
                       <div className="text-lg font-bold text-[var(--text-primary)]">
                         {chat.agent_score ?? "-"}
                       </div>
@@ -357,7 +357,7 @@ export function ChatList({
                       variant="outline"
                       onClick={() => handleReanalyze(chat.chat_id)}
                       disabled={isReanalyzing}
-                      className="border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                      className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30 sm:w-auto"
                     >
                       {isReanalyzing ? (
                         <>
@@ -375,7 +375,7 @@ export function ChatList({
 
                   <Link
                     href={`/dashboard/chats/${chat.chat_id}`}
-                    className="text-[var(--text-muted)] hover:text-[var(--accent)]"
+                    className="self-end text-[var(--text-muted)] hover:text-[var(--accent)] sm:self-auto"
                   >
                     <ChevronRight className="w-5 h-5" />
                   </Link>

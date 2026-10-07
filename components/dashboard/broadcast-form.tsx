@@ -308,7 +308,7 @@ export function BroadcastForm() {
         {/* Filter */}
         <div>
           <Label>🎯 Filter Penerima</Label>
-          <div className="grid grid-cols-2 gap-3 mt-1.5">
+          <div className="mt-1.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <MultiSelectFilter
               options={ROLE_OPTIONS.filter((option) => availableRoles.includes(option.value))}
               values={filterRoles}

@@ -48,7 +48,7 @@ export function LeaderboardTable({ data }: { data: LeaderboardEntry[] }) {
         return (
           <div
             key={entry.agent_id}
-            className={`rounded-lg border bg-[var(--surface)] p-4 flex items-center gap-4 transition-colors ${
+            className={`flex flex-wrap items-center gap-3 rounded-lg border bg-[var(--surface)] p-4 transition-colors sm:flex-nowrap sm:gap-4 ${
               rank <= 3
                 ? "border-[var(--accent)]/30"
                 : "border-[var(--border)]"
@@ -73,14 +73,14 @@ export function LeaderboardTable({ data }: { data: LeaderboardEntry[] }) {
               </p>
             </div>
 
-            <div className="text-center px-4 border-l border-[var(--border)]">
+            <div className="border-l border-[var(--border)] px-3 text-center sm:px-4">
               <div className="text-lg font-bold text-[var(--accent)]">
                 {entry.closing_rate}%
               </div>
               <div className="text-xs text-[var(--text-muted)]">closing</div>
             </div>
 
-            <div className="text-center px-4 border-l border-[var(--border)]">
+            <div className="border-l border-[var(--border)] px-3 text-center sm:px-4">
               <div className="text-lg font-bold text-[var(--text-primary)]">
                 {entry.avg_score}
               </div>

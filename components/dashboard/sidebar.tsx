@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/database";
 import { getRoleEmoji, getRoleLabel } from "@/lib/roles";
@@ -14,6 +15,8 @@ import {
   Users,
   UserCog,
   Megaphone,
+  Menu,
+  X,
 } from "lucide-react";
 
 interface NavItem {
@@ -80,6 +83,7 @@ const navGroups: NavGroup[] = [
 
 export function Sidebar({ user }: { user: User }) {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Filter groups: hapus group yang tidak punya item visible
   const visibleGroups = navGroups
@@ -102,17 +106,50 @@ export function Sidebar({ user }: { user: User }) {
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
-    <aside className="w-[240px] border-r border-[var(--border)] bg-[var(--bg-sidebar)] flex flex-col h-screen sticky top-0">
+    <>
+      <button
+        type="button"
+        aria-label="Buka menu navigasi"
+        aria-expanded={mobileOpen}
+        onClick={() => setMobileOpen(true)}
+        className="fixed left-4 top-3 z-50 inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] shadow-sm transition-colors hover:bg-[var(--bg-secondary)] lg:hidden"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Tutup menu navigasi"
+          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 z-40 bg-slate-950/40 lg:hidden"
+        />
+      )}
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex w-[min(85vw,280px)] -translate-x-full flex-col border-r border-[var(--border)] bg-[var(--bg-sidebar)] shadow-xl transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-[240px] lg:translate-x-0 lg:shadow-none",
+          mobileOpen && "translate-x-0"
+        )}
+      >
       {/* Logo */}
-      <div className="h-14 flex items-center px-5 border-b border-[var(--border)]">
+      <div className="flex h-14 items-center justify-between border-b border-[var(--border)] px-5">
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[var(--accent)] flex items-center justify-center">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)]">
             <BarChart3 className="w-5 h-5 text-white" />
           </div>
           <span className="font-bold text-base tracking-tight">
             Agent Analysis
           </span>
         </Link>
+        <button
+          type="button"
+          aria-label="Tutup menu navigasi"
+          onClick={() => setMobileOpen(false)}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] lg:hidden"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -134,6 +171,7 @@ export function Sidebar({ user }: { user: User }) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={() => setMobileOpen(false)}
                     className={cn(
                       "group flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors",
                       isActive
@@ -172,6 +210,7 @@ export function Sidebar({ user }: { user: User }) {
           </div>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

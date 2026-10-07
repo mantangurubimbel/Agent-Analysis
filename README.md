@@ -20,6 +20,7 @@ Status dokumentasi: diperbarui berdasarkan source code per 24 September 2026.
   history sesuai cakupan user, detail penerima gagal, retry, serta scheduled broadcast
   sekali jalan/harian/mingguan.
 - Dark/light mode dengan custom ThemeProvider.
+- Layout mobile-friendly dengan sidebar drawer, header adaptif, dan komponen dashboard yang menyesuaikan lebar layar.
 
 ## Tech stack
 

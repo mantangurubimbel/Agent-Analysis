@@ -295,7 +295,7 @@ function UserRow({
       }`}
     >
       <div className="p-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={onToggle}
             className={`w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--bg-secondary)] ${
@@ -343,6 +343,7 @@ function UserRow({
             </div>
           )}
 
+          <div className="ml-auto flex items-center gap-2 sm:ml-0">
           <ActiveToggle
             key={`${user.id}-${isInactive ? "inactive" : "active"}`}
             userId={user.id}
@@ -354,6 +355,7 @@ function UserRow({
           {showDelete && (
             <DeleteUserButton userId={user.id} userName={user.full_name} />
           )}
+          </div>
         </div>
       </div>
     </div>

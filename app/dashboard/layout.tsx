@@ -23,16 +23,16 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen bg-[var(--bg-main)]">
       <Sidebar user={user} />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
         {/* Header */}
-        <header className="h-14 border-b border-[var(--border)] bg-[var(--bg-main)] flex items-center justify-end px-5 gap-1 sticky top-0 z-40">
+        <header className="sticky top-0 z-40 flex h-14 items-center justify-end gap-1 border-b border-[var(--border)] bg-[var(--bg-main)] pl-16 pr-4 sm:px-5">
           <ThemeToggle />
           <UserMenu email={authUser.email ?? ""} />
         </header>
 
         {/* Main Content */}
         <main className="flex-1">
-          <div className="max-w-7xl mx-auto p-6 lg:p-8">{children}</div>
+          <div className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">{children}</div>
         </main>
       </div>
     </div>

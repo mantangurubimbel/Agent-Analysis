@@ -107,7 +107,7 @@ export function AnalysisConfig() {
           <CardTitle>Threshold & Limits</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="confidence_threshold">
                 Confidence Threshold
@@ -149,7 +149,7 @@ export function AnalysisConfig() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <Label htmlFor="max_messages">Max Messages</Label>
               <Input

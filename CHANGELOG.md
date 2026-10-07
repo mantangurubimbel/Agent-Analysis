@@ -16,6 +16,7 @@ Semua perubahan penting di dashboard frontend.
 - Detail penerima gagal dan retry broadcast tersedia untuk admin, supervisor, dan leader sesuai cakupan.
 - Scheduled broadcast tersedia untuk mode sekali jalan, harian, dan mingguan dengan kontrol aktif/nonaktif.
 - Scheduled broadcast memakai timezone WIB dan menampilkan creator serta jadwal eksekusi berikutnya.
+- Layout dashboard dibuat responsive untuk mobile: sidebar menjadi drawer, padding/grid/form menyesuaikan layar kecil, dan kartu data dapat membungkus konten.
 
 ### Known technical debt
 
@@ -27,7 +28,6 @@ Semua perubahan penting di dashboard frontend.
 ### Planned
 
 - Trending Upload chart 7 hari.
-- Mobile responsive improvements.
 - Real-time notification.
 - Per-agent upload limit override.
 - Export PDF/Excel report dan upload log CSV.

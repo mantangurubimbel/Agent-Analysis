@@ -132,6 +132,7 @@ API route tetap wajib melakukan authorization sendiri; pembatasan menu di UI buk
 - Settings: LLM, Analysis, Profile, Maintenance, dan Upload Limit.
 - Broadcast: preview, multi-select role/team, kirim, dan riwayat sesuai cakupan hierarki.
 - Scheduled broadcast: sekali jalan, harian, mingguan, aktif/nonaktif, hapus, dan riwayat eksekusi.
+- Layout dashboard responsive: sidebar drawer pada mobile, grid/form adaptif, dan area data tidak memaksa overflow horizontal.
 - Broadcast gagal: detail penerima gagal dan retry melalui `/api/broadcast/[id]/failed`.
 
 ### Broadcast dan cakupan hierarki

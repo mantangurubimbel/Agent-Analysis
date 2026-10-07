@@ -41,9 +41,9 @@ export default async function ManageUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)] sm:text-3xl">
             Manage Users
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-1.5">
@@ -60,7 +60,7 @@ export default async function ManageUsersPage() {
         <span>🎯 Leader</span>
         <span>💼 Agent</span>
         {limitEnabled && (
-          <span className="ml-auto">
+            <span className="sm:ml-auto">
             📤 Limit upload: <strong>{limitDefault}/hari</strong> (reset 00:00 WIB)
           </span>
         )}
