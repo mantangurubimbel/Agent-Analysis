@@ -190,22 +190,82 @@ export async function PATCH(request: Request) {
     const scope = await getBroadcastScope(supabase, user);
     const { data: existing, error: fetchError } = await supabase
       .from("broadcast_schedules")
-      .select("id, created_by")
+      .select("id, created_by, is_active")
       .eq("id", id)
       .maybeSingle();
     if (fetchError || !existing || !canAccessBroadcastSender(scope, existing.created_by)) {
       return NextResponse.json({ error: "Jadwal tidak ditemukan atau tidak dapat diakses" }, { status: 404 });
     }
-    if (typeof body.is_active !== "boolean") {
-      return NextResponse.json({ error: "Status jadwal tidak valid" }, { status: 400 });
+    if (typeof body.is_active === "boolean" && Object.keys(body).length <= 2) {
+      const { data, error } = await supabase
+        .from("broadcast_schedules")
+        .update({ is_active: body.is_active, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error || !data) return NextResponse.json({ error: "Gagal mengubah status jadwal" }, { status: 500 });
+      return NextResponse.json({ success: true, schedule: data });
     }
+
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const message = typeof body.message === "string" ? body.message.trim() : "";
+    const scheduleType = body.schedule_type as ScheduleType;
+    const filterRoles = normalizeFilterValues(body.filter_role);
+    const filterTeams = normalizeFilterValues(body.filter_team);
+    const filterActive = body.filter_active !== false;
+    const weekday = Number(body.weekday);
+    if (name.length < 1 || name.length > 200) {
+      return NextResponse.json({ error: "Nama jadwal wajib diisi dan maksimal 200 karakter" }, { status: 400 });
+    }
+    if (message.length < 5 || message.length > 4096) {
+      return NextResponse.json({ error: "Pesan harus berisi 5–4096 karakter" }, { status: 400 });
+    }
+    if (!["once", "daily", "weekly"].includes(scheduleType)) {
+      return NextResponse.json({ error: "Tipe jadwal tidak valid" }, { status: 400 });
+    }
+    if (filterRoles.some((role) => !isBroadcastRole(role))) {
+      return NextResponse.json({ error: "Filter role tidak valid" }, { status: 400 });
+    }
+    const scopeError = validateBroadcastFilters(filterRoles, filterTeams, scope);
+    if (scopeError) return NextResponse.json({ error: scopeError }, { status: 403 });
+    if (scheduleType === "weekly" && (!Number.isInteger(weekday) || weekday < 1 || weekday > 7)) {
+      return NextResponse.json({ error: "Hari dalam minggu wajib dipilih" }, { status: 400 });
+    }
+    const startInput = parseWibDateTime(body.start_at);
+    if (!startInput) return NextResponse.json({ error: "Tanggal dan jam mulai tidak valid" }, { status: 400 });
+    const nextRun = scheduleType === "weekly"
+      ? nextWeeklyDate(startInput, weekday, body.start_at as string)
+      : startInput;
+    if (nextRun.getTime() <= Date.now()) {
+      return NextResponse.json({ error: "Jadwal mulai harus berada di masa depan" }, { status: 400 });
+    }
+    const endInput = body.end_at ? parseWibDateTime(body.end_at) : null;
+    if (body.end_at && !endInput) {
+      return NextResponse.json({ error: "Tanggal dan jam berakhir tidak valid" }, { status: 400 });
+    }
+    if (endInput && endInput.getTime() < nextRun.getTime()) {
+      return NextResponse.json({ error: "Tanggal berakhir harus setelah jadwal mulai" }, { status: 400 });
+    }
+
     const { data, error } = await supabase
       .from("broadcast_schedules")
-      .update({ is_active: body.is_active, updated_at: new Date().toISOString() })
+      .update({
+        name,
+        message,
+        filter_role: filterRoles.length ? filterRoles.join(",") : null,
+        filter_team: filterTeams.length ? filterTeams.join(",") : null,
+        filter_active: filterActive,
+        schedule_type: scheduleType,
+        next_run_at: toDbTimestamp(nextRun),
+        end_at: endInput ? toDbTimestamp(endInput) : null,
+        weekday: scheduleType === "weekly" ? weekday : null,
+        is_active: typeof body.is_active === "boolean" ? body.is_active : existing.is_active,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", id)
       .select()
       .single();
-    if (error || !data) return NextResponse.json({ error: "Gagal mengubah status jadwal" }, { status: 500 });
+    if (error || !data) return NextResponse.json({ error: "Gagal memperbarui jadwal broadcast" }, { status: 500 });
     return NextResponse.json({ success: true, schedule: data });
   } catch (error) {
     console.error("Broadcast schedules PATCH error:", error);

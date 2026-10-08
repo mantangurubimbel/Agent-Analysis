@@ -124,7 +124,7 @@ POST /api/broadcast/{id}/failed
 
 Retry membuat record broadcast baru sehingga audit broadcast sebelumnya tetap tersimpan.
 
-Scheduled broadcast dibuat dari card `Jadwal Broadcast` di `/dashboard/broadcast`.
+Scheduled broadcast dibuat dan dapat diedit dari card `Jadwal Broadcast` di `/dashboard/broadcast`.
 Tanggal dan jam pada UI menggunakan WIB; worker backend akan menghitung ulang recipient
 sesuai hierarki sender setiap eksekusi dan otomatis memasukkan sender sebagai recipient.
 Jadwal sekali jalan menjadi nonaktif setelah dibuat ke queue, sedangkan jadwal harian dan

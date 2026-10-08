@@ -36,6 +36,7 @@ Semua perubahan penting di dashboard frontend.
 
 ### Added
 
+- Tombol Edit pada scheduled broadcast untuk memperbarui pesan, penerima, tipe, waktu, dan status jadwal.
 - Halaman Broadcast Telegram untuk admin/supervisor.
 - Halaman Maintenance mode.
 - Toggle `is_active` user di Manage Users.

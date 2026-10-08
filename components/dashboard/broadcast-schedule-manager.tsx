@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarClock, CheckCircle2, History, Loader2, Pause, Play, Trash2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, History, Loader2, Pause, Pencil, Play, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -98,6 +98,7 @@ export function BroadcastScheduleManager({ teams, roles }: ScheduleManagerProps)
   const [filterActive, setFilterActive] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -129,7 +130,7 @@ export function BroadcastScheduleManager({ teams, roles }: ScheduleManagerProps)
     setSaving(true);
     try {
       const response = await fetch("/api/broadcast/schedules", {
-        method: "POST",
+        method: editingId === null ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
@@ -141,11 +142,13 @@ export function BroadcastScheduleManager({ teams, roles }: ScheduleManagerProps)
           filter_role: filterRoles,
           filter_team: filterTeams,
           filter_active: filterActive,
+          ...(editingId === null ? {} : { id: editingId }),
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Gagal menyimpan jadwal");
-      setSuccess("Jadwal broadcast berhasil disimpan");
+      setSuccess(editingId === null ? "Jadwal broadcast berhasil disimpan" : "Jadwal broadcast berhasil diperbarui");
+      setEditingId(null);
       setName("");
       setMessage("");
       setEndAt("");
@@ -157,6 +160,35 @@ export function BroadcastScheduleManager({ teams, roles }: ScheduleManagerProps)
     } finally {
       setSaving(false);
     }
+  }
+
+  function startEdit(schedule: Schedule): void {
+    setError(null);
+    setSuccess(null);
+    setEditingId(schedule.id);
+    setName(schedule.name);
+    setMessage(schedule.message);
+    setScheduleType(schedule.schedule_type);
+    setStartAt(toWibInput(schedule.next_run_at));
+    setEndAt(toWibInput(schedule.end_at));
+    setWeekday(String(schedule.weekday ?? 1));
+    setFilterRoles(schedule.filter_role ? schedule.filter_role.split(",").filter(Boolean) : []);
+    setFilterTeams(schedule.filter_team ? schedule.filter_team.split(",").filter(Boolean) : []);
+    setFilterActive(schedule.filter_active);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelEdit(): void {
+    setEditingId(null);
+    setName("");
+    setMessage("");
+    setEndAt("");
+    setScheduleType("once");
+    setStartAt(getDefaultStart());
+    setWeekday("1");
+    setFilterRoles([]);
+    setFilterTeams([]);
+    setFilterActive(true);
   }
 
   async function updateSchedule(id: number, isActive: boolean): Promise<void> {
@@ -239,11 +271,14 @@ export function BroadcastScheduleManager({ teams, roles }: ScheduleManagerProps)
           <label className="mt-2 flex items-center gap-2 text-sm text-[var(--text-secondary)]"><input type="checkbox" checked={filterActive} onChange={(event) => setFilterActive(event.target.checked)} /> Hanya user aktif</label>
         </div>
 
-        <div className="flex justify-end"><Button onClick={() => void saveSchedule()} disabled={saving} className="bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]">{saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Menyimpan...</> : <><CalendarClock className="mr-2 h-4 w-4" />Simpan Jadwal</>}</Button></div>
+        <div className="flex justify-end gap-2">
+          {editingId !== null && <Button type="button" variant="outline" onClick={cancelEdit} disabled={saving}><X className="mr-2 h-4 w-4" />Batal</Button>}
+          <Button onClick={() => void saveSchedule()} disabled={saving} className="bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]">{saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Menyimpan...</> : <><CalendarClock className="mr-2 h-4 w-4" />{editingId === null ? "Simpan Jadwal" : "Simpan Perubahan"}</>}</Button>
+        </div>
 
         <div className="space-y-3 border-t border-[var(--border)] pt-4">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Jadwal tersimpan</h3>
-          {loading ? <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-muted)]" /></div> : schedules.length === 0 ? <p className="text-sm text-[var(--text-muted)]">Belum ada jadwal broadcast.</p> : schedules.map((schedule) => <div key={schedule.id} className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-3"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-sm font-medium text-[var(--text-primary)]">{schedule.name}</p><p className="text-xs text-[var(--text-muted)]">{formatScheduleType(schedule)} · berikutnya {formatWibDateTime(schedule.next_run_at, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>{schedule.creator && <p className="text-xs text-[var(--text-muted)]">Dibuat oleh {schedule.creator.full_name}</p>}</div><span className={`rounded-full px-2 py-0.5 text-xs ${schedule.is_active ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}>{schedule.is_active ? "Aktif" : "Nonaktif"}</span></div><p className="mt-2 line-clamp-2 text-xs text-[var(--text-secondary)]">{schedule.message}</p><div className="mt-3 flex flex-wrap justify-end gap-2"><Button variant="outline" size="sm" onClick={() => void toggleRuns(schedule.id)} disabled={loadingRuns === schedule.id}>{loadingRuns === schedule.id ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <History className="mr-1 h-3.5 w-3.5" />}Riwayat</Button><Button variant="outline" size="sm" onClick={() => void updateSchedule(schedule.id, !schedule.is_active)}>{schedule.is_active ? <><Pause className="mr-1 h-3.5 w-3.5" />Nonaktifkan</> : <><Play className="mr-1 h-3.5 w-3.5" />Aktifkan</>}</Button><Button variant="destructive" size="sm" onClick={() => void deleteSchedule(schedule.id)}><Trash2 className="mr-1 h-3.5 w-3.5" />Hapus</Button></div>{runsBySchedule[schedule.id] && <div className="mt-3 space-y-2 border-t border-[var(--border)] pt-3">{runsBySchedule[schedule.id].length === 0 ? <p className="text-xs text-[var(--text-muted)]">Belum ada eksekusi.</p> : runsBySchedule[schedule.id].map((run) => <div key={run.id} className="flex flex-wrap items-center justify-between gap-2 text-xs"><span className="text-[var(--text-muted)]">{formatWibDateTime(run.scheduled_for, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span><span className={run.status === "failed" ? "text-rose-600" : "text-[var(--text-secondary)]"}>{run.status}{run.broadcast_id ? ` · Broadcast #${run.broadcast_id}` : ""}</span></div>)}</div>}</div>)}
+          {loading ? <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-muted)]" /></div> : schedules.length === 0 ? <p className="text-sm text-[var(--text-muted)]">Belum ada jadwal broadcast.</p> : schedules.map((schedule) => <div key={schedule.id} className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-3"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-sm font-medium text-[var(--text-primary)]">{schedule.name}</p><p className="text-xs text-[var(--text-muted)]">{formatScheduleType(schedule)} · berikutnya {formatWibDateTime(schedule.next_run_at, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>{schedule.creator && <p className="text-xs text-[var(--text-muted)]">Dibuat oleh {schedule.creator.full_name}</p>}</div><span className={`rounded-full px-2 py-0.5 text-xs ${schedule.is_active ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}>{schedule.is_active ? "Aktif" : "Nonaktif"}</span></div><p className="mt-2 line-clamp-2 text-xs text-[var(--text-secondary)]">{schedule.message}</p><div className="mt-3 flex flex-wrap justify-end gap-2"><Button variant="outline" size="sm" onClick={() => startEdit(schedule)}><Pencil className="mr-1 h-3.5 w-3.5" />Edit</Button><Button variant="outline" size="sm" onClick={() => void toggleRuns(schedule.id)} disabled={loadingRuns === schedule.id}>{loadingRuns === schedule.id ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <History className="mr-1 h-3.5 w-3.5" />}Riwayat</Button><Button variant="outline" size="sm" onClick={() => void updateSchedule(schedule.id, !schedule.is_active)}>{schedule.is_active ? <><Pause className="mr-1 h-3.5 w-3.5" />Nonaktifkan</> : <><Play className="mr-1 h-3.5 w-3.5" />Aktifkan</>}</Button><Button variant="destructive" size="sm" onClick={() => void deleteSchedule(schedule.id)}><Trash2 className="mr-1 h-3.5 w-3.5" />Hapus</Button></div>{runsBySchedule[schedule.id] && <div className="mt-3 space-y-2 border-t border-[var(--border)] pt-3">{runsBySchedule[schedule.id].length === 0 ? <p className="text-xs text-[var(--text-muted)]">Belum ada eksekusi.</p> : runsBySchedule[schedule.id].map((run) => <div key={run.id} className="flex flex-wrap items-center justify-between gap-2 text-xs"><span className="text-[var(--text-muted)]">{formatWibDateTime(run.scheduled_for, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span><span className={run.status === "failed" ? "text-rose-600" : "text-[var(--text-secondary)]"}>{run.status}{run.broadcast_id ? ` · Broadcast #${run.broadcast_id}` : ""}</span></div>)}</div>}</div>)}
         </div>
       </CardContent>
     </Card>

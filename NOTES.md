@@ -41,6 +41,7 @@ Backend dan dashboard sudah memiliki fitur upload limit harian yang membaca sumb
 - Retry membuat broadcast baru dan tidak mengubah audit broadcast lama.
 - Retry dapat gagal kembali jika penyebab awal adalah format HTML Telegram yang invalid.
 - Scheduled broadcast tersedia untuk mode sekali jalan, harian, dan mingguan.
+- Jadwal tersimpan dapat diedit; perubahan memperbarui slot berikutnya tanpa mengubah riwayat eksekusi sebelumnya.
 - Card jadwal memakai timezone WIB; backend menghitung ulang recipient saat slot jatuh tempo.
 - Sender otomatis menjadi recipient dan slot eksekusi memakai unique key `(schedule_id, scheduled_for)`.
 - Sidebar dashboard pada mobile tampil sebagai drawer; konten utama, form, kartu statistik, chat list, leaderboard, dan user tree sudah memiliki perilaku responsive dasar.
