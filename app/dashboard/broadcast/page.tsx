@@ -2,9 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getBroadcastScope } from "@/lib/broadcast-access";
-import { BroadcastForm } from "@/components/dashboard/broadcast-form";
-import { BroadcastHistory } from "@/components/dashboard/broadcast-history";
-import { BroadcastScheduleManager } from "@/components/dashboard/broadcast-schedule-manager";
+import { BroadcastWorkspace } from "@/components/dashboard/broadcast-workspace";
 
 export default async function BroadcastPage() {
   const user = await getCurrentUser();
@@ -28,19 +26,7 @@ export default async function BroadcastPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Form (kiri) */}
-        <div className="lg:col-span-3">
-          <BroadcastForm />
-        </div>
-
-        {/* History (kanan) */}
-        <div className="lg:col-span-2">
-          <BroadcastHistory />
-        </div>
-      </div>
-
-      <BroadcastScheduleManager teams={scope.teams} roles={scope.allowedRoles} />
+      <BroadcastWorkspace teams={scope.teams} roles={scope.allowedRoles} />
     </div>
   );
 }
