@@ -10,8 +10,9 @@ import { MaintenanceConfig } from "./maintenance-config";
 import { UploadLimitConfig } from "./upload-limit-config";
 import { UploadReport } from "./upload-report";
 import { InvoiceManager } from "./invoice-manager";
+import { InvoiceSettings } from "./invoice-settings";
 
-type Tab = "llm" | "analysis" | "upload-limit" | "upload-report" | "invoices" | "maintenance" | "profile";
+type Tab = "llm" | "analysis" | "upload-limit" | "upload-report" | "invoices" | "invoice-settings" | "maintenance" | "profile";
 
 const TABS = [
   { id: "llm" as const, label: "LLM", icon: Bot, roles: ["admin"] },
@@ -19,6 +20,7 @@ const TABS = [
   { id: "upload-limit" as const, label: "Upload Limit", icon: Upload, roles: ["admin"] },
   { id: "upload-report" as const, label: "Billing Upload", icon: BarChart3, roles: ["admin", "supervisor", "leader"] },
   { id: "invoices" as const, label: "Invoice", icon: BarChart3, roles: ["admin", "supervisor"] },
+  { id: "invoice-settings" as const, label: "Invoice Settings", icon: Wrench, roles: ["admin"] },
   { id: "maintenance" as const, label: "Maintenance", icon: Wrench, roles: ["admin"] },
   { id: "profile" as const, label: "Profile", icon: UserIcon, roles: ["admin", "leader", "supervisor", "agent"] },
 ];
@@ -57,6 +59,7 @@ export function SettingsTabs({ userRole }: { userRole: string }) {
         {activeTab === "upload-limit" && <UploadLimitConfig />}
         {activeTab === "upload-report" && <UploadReport />}
         {activeTab === "invoices" && <InvoiceManager userRole={userRole} />}
+        {activeTab === "invoice-settings" && <InvoiceSettings />}
         {activeTab === "maintenance" && <MaintenanceConfig />}
         {activeTab === "profile" && <ProfileConfig />}
       </div>
