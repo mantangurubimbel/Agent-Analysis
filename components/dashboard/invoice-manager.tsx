@@ -13,6 +13,10 @@ export function InvoiceManager({ userRole }: { userRole: string }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [supervisors, setSupervisors] = useState<{ id: number; full_name: string }[]>([]);
+  const [periods, setPeriods] = useState<string[]>([]);
+  const [supervisorId, setSupervisorId] = useState("");
+  const [period, setPeriod] = useState("");
 
   async function load() {
     setLoading(true);
@@ -30,13 +34,21 @@ export function InvoiceManager({ userRole }: { userRole: string }) {
     if (response.ok) void load();
   }
 
+  async function generate() {
+    if (!supervisorId || !period) return;
+    const response = await fetch("/api/invoices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ supervisor_id: Number(supervisorId), period }) });
+    const data = await response.json();
+    if (!response.ok) setError(data.error || "Gagal membuat invoice"); else void load();
+  }
+
   // Memuat invoice saat tab dibuka.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); if (userRole === "admin") fetch("/api/invoices/options").then((r) => r.json()).then((d) => { setSupervisors(d.supervisors ?? []); setPeriods(d.periods ?? []); }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Card>
     <CardHeader><CardTitle>Invoice Billing</CardTitle><CardDescription>Invoice dibuat per supervisor dan status pembayaran dikonfirmasi admin.</CardDescription></CardHeader>
     <CardContent>
+      {userRole === "admin" && <div className="mb-5 flex flex-wrap items-end gap-2 rounded-lg border border-[var(--border)] p-3"><label className="text-sm">Supervisor<select value={supervisorId} onChange={(e) => setSupervisorId(e.target.value)} className="mt-1 block rounded-md border border-[var(--border)] bg-transparent px-2 py-2"><option value="">Pilih supervisor</option>{supervisors.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></label><label className="text-sm">Periode<select value={period} onChange={(e) => setPeriod(e.target.value)} className="mt-1 block rounded-md border border-[var(--border)] bg-transparent px-2 py-2"><option value="">Pilih periode</option>{periods.map((p) => <option key={p} value={p}>{p}</option>)}</select></label><Button onClick={() => void generate()} disabled={!supervisorId || !period}>Generate Invoice</Button></div>}
       {loading ? <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div> : error ? <p className="text-sm text-red-600">{error}</p> : invoices.length === 0 ? <p className="text-sm text-[var(--text-muted)]">Belum ada invoice.</p> : <div className="space-y-3">{invoices.map((invoice) => <div key={invoice.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border)] p-4"><div><div className="font-semibold">{invoice.invoice_number}</div><div className="text-sm text-[var(--text-muted)]">{invoice.users?.full_name ?? "Supervisor"} · {invoice.period_month.slice(0, 7)} · {invoice.total_chats} chat</div><div className="text-sm">Status: <span className="font-medium">{statusLabel[invoice.status] ?? invoice.status}</span></div></div><div className="flex items-center gap-3"><div className="font-semibold">Rp {Number(invoice.total).toLocaleString("id-ID")}</div>{userRole === "admin" && invoice.status !== "paid" && invoice.status !== "cancelled" && <Button size="sm" onClick={() => void markPaid(invoice.id)}><CheckCircle2 className="mr-2 h-4 w-4" />Tandai Lunas</Button>}</div></div>)}</div>}
     </CardContent>
   </Card>;
