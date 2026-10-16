@@ -42,7 +42,7 @@ export function InvoiceManager({ userRole }: { userRole: string }) {
     const data = await response.json();
     if (!response.ok) setError(data.error || "Gagal membuat invoice"); else void load();
   }
-  async function showDetail(id: number) { const response = await fetch(`/api/invoices/${id}`); const data = await response.json(); if (response.ok) setSelected(data.invoice); }
+  async function showDetail(id: number) { const response = await fetch(`/api/invoices/${id}`); const data = await response.json(); if (response.ok) setSelected(data.invoice); else setError(data.error || "Gagal membuka detail invoice"); }
 
   // Memuat invoice saat tab dibuka.
   // eslint-disable-next-line react-hooks/set-state-in-effect
