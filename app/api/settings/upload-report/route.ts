@@ -80,8 +80,7 @@ export async function GET(request: Request) {
     .map((chat) => chat.chat_id));
   const { data: users, error: usersError } = await supabase
     .from("users")
-    .select("id, full_name, role, leader_id, supervisor_id")
-    .eq("is_active", true);
+    .select("id, full_name, role, leader_id, supervisor_id");
   if (usersError) return NextResponse.json({ error: "Gagal mengambil struktur tim" }, { status: 500 });
   const userMap = new Map((users ?? []).map((row) => [row.id, row as UserRow]));
   const leaders = new Map<number, { id: number; name: string; supervisor_id: number | null; total: number; agents: Map<number, { id: number; name: string; total: number }> }>();
@@ -90,7 +89,8 @@ export async function GET(request: Request) {
     const agent = userMap.get(log.user_id);
     if (!agent) continue;
     const leaderId = agent.leader_id ?? 0;
-    const leader = leaders.get(leaderId) ?? { id: leaderId, name: leaderId ? "Leader tidak ditemukan" : "Belum ditetapkan", supervisor_id: agent.supervisor_id, total: 0, agents: new Map() };
+    const leaderUser = leaderId ? userMap.get(leaderId) : undefined;
+    const leader = leaders.get(leaderId) ?? { id: leaderId, name: leaderUser?.full_name ?? (leaderId ? "Leader tidak ditemukan" : "Belum ditetapkan"), supervisor_id: leaderUser?.supervisor_id ?? null, total: 0, agents: new Map() };
     leader.total++;
     const agentEntry = leader.agents.get(agent.id) ?? { id: agent.id, name: agent.full_name, total: 0 };
     agentEntry.total++;
