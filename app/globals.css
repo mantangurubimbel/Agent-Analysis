@@ -1,4 +1,10 @@
 @import "tailwindcss";
+
+@media print {
+  body * { visibility: hidden !important; }
+  .invoice-print, .invoice-print * { visibility: visible !important; }
+  .invoice-print { position: absolute; left: 0; top: 0; width: 100%; border: 0 !important; box-shadow: none !important; }
+}
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(html[data-theme="dark"] *));
