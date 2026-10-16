@@ -83,27 +83,32 @@ export async function GET(request: Request) {
     .select("id, full_name, role, leader_id, supervisor_id");
   if (usersError) return NextResponse.json({ error: "Gagal mengambil struktur tim" }, { status: 500 });
   const userMap = new Map((users ?? []).map((row) => [row.id, row as UserRow]));
-  const leaders = new Map<number, { id: number; name: string; supervisor_id: number | null; total: number; agents: Map<number, { id: number; name: string; total: number }> }>();
+  const supervisors = new Map<number, { id: number; name: string; total: number; uploaders: Map<number, { id: number; name: string; role: string; total: number }> }>();
   for (const [chatId, log] of firstByChat) {
     if (!successful.has(chatId)) continue;
-    const agent = userMap.get(log.user_id);
-    if (!agent) continue;
-    const leaderId = agent.leader_id ?? 0;
-    const leaderUser = leaderId ? userMap.get(leaderId) : undefined;
-    const leader = leaders.get(leaderId) ?? { id: leaderId, name: leaderUser?.full_name ?? (leaderId ? "Leader tidak ditemukan" : "Belum ditetapkan"), supervisor_id: leaderUser?.supervisor_id ?? null, total: 0, agents: new Map() };
-    leader.total++;
-    const agentEntry = leader.agents.get(agent.id) ?? { id: agent.id, name: agent.full_name, total: 0 };
-    agentEntry.total++;
-    leader.agents.set(agent.id, agentEntry);
-    leaders.set(leaderId, leader);
+    const uploader = userMap.get(log.user_id);
+    if (!uploader) continue;
+    const leader = uploader.role === "leader" ? uploader : uploader.leader_id ? userMap.get(uploader.leader_id) : undefined;
+    const supervisor = uploader.role === "supervisor"
+      ? uploader
+      : uploader.supervisor_id
+        ? userMap.get(uploader.supervisor_id)
+        : leader?.supervisor_id
+          ? userMap.get(leader.supervisor_id)
+          : undefined;
+    const supervisorId = supervisor?.id ?? 0;
+    const supervisorEntry = supervisors.get(supervisorId) ?? { id: supervisorId, name: supervisor?.full_name ?? "Supervisor belum ditetapkan", total: 0, uploaders: new Map() };
+    supervisorEntry.total++;
+    const uploaderEntry = supervisorEntry.uploaders.get(uploader.id) ?? { id: uploader.id, name: uploader.full_name, role: uploader.role, total: 0 };
+    uploaderEntry.total++;
+    supervisorEntry.uploaders.set(uploader.id, uploaderEntry);
+    supervisors.set(supervisorId, supervisorEntry);
   }
-  const rows = [...leaders.values()].map((leader) => ({
-    leader_id: leader.id || null,
-    leader_name: leader.name,
-    supervisor_id: leader.supervisor_id,
-    supervisor_name: userMap.get(leader.supervisor_id ?? 0)?.full_name ?? (leader.supervisor_id ? "Supervisor tidak ditemukan" : "Belum ditetapkan"),
-    total: leader.total,
-    agents: [...leader.agents.values()].sort((a, b) => b.total - a.total),
+  const rows = [...supervisors.values()].map((supervisor) => ({
+    supervisor_id: supervisor.id || null,
+    supervisor_name: supervisor.name,
+    total: supervisor.total,
+    uploaders: [...supervisor.uploaders.values()].sort((a, b) => b.total - a.total),
   }));
-  return NextResponse.json({ from: range.start.toISOString(), to: range.end.toISOString(), total: rows.reduce((sum, row) => sum + row.total, 0), leaders: rows });
+  return NextResponse.json({ from: range.start.toISOString(), to: range.end.toISOString(), total: rows.reduce((sum, row) => sum + row.total, 0), supervisors: rows });
 }

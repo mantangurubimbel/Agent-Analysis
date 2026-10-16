@@ -5,9 +5,9 @@ import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-type AgentRow = { id: number; name: string; total: number };
-type LeaderRow = { leader_id: number | null; leader_name: string; supervisor_id: number | null; supervisor_name: string; total: number; agents: AgentRow[] };
-type Report = { from: string; to: string; total: number; leaders: LeaderRow[] };
+type UploaderRow = { id: number; name: string; role: string; total: number };
+type SupervisorRow = { supervisor_id: number | null; supervisor_name: string; total: number; uploaders: UploaderRow[] };
+type Report = { from: string; to: string; total: number; supervisors: SupervisorRow[] };
 
 function monthRange(): [string, string] {
   const now = new Date();
@@ -59,10 +59,10 @@ export function UploadReport() {
         {loading ? <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div> : error ? <p className="text-sm text-red-600">{error}</p> : report && (
           <div className="space-y-4">
             <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4"><div className="text-3xl font-bold">{report.total}</div><div className="text-sm text-[var(--text-muted)]">Total chat unik berhasil dianalisis</div></div>
-            {report.leaders.length === 0 ? <p className="text-sm text-[var(--text-muted)]">Tidak ada chat pada rentang ini.</p> : report.leaders.map((leader) => (
-              <div key={`${leader.supervisor_id ?? "none"}-${leader.leader_id ?? "none"}`} className="rounded-lg border border-[var(--border)] p-4">
-                <div className="flex justify-between gap-3"><div><div className="text-xs text-[var(--text-muted)]">Supervisor: {leader.supervisor_name}</div><div className="font-semibold">{leader.leader_name}</div></div><div className="text-xl font-bold">{leader.total}</div></div>
-                <div className="mt-3 space-y-1 border-t border-[var(--border)] pt-3">{leader.agents.map((agent) => <div key={agent.id} className="flex justify-between text-sm"><span>{agent.name}</span><span className="font-medium">{agent.total}</span></div>)}</div>
+            {report.supervisors.length === 0 ? <p className="text-sm text-[var(--text-muted)]">Tidak ada chat pada rentang ini.</p> : report.supervisors.map((supervisor) => (
+              <div key={supervisor.supervisor_id ?? "none"} className="rounded-lg border border-[var(--border)] p-4">
+                <div className="flex justify-between gap-3"><div className="font-semibold">{supervisor.supervisor_name}</div><div className="text-xl font-bold">{supervisor.total}</div></div>
+                <div className="mt-3 space-y-1 border-t border-[var(--border)] pt-3">{supervisor.uploaders.map((uploader) => <div key={uploader.id} className="flex justify-between text-sm"><span>{uploader.name} <span className="text-xs text-[var(--text-muted)]">({uploader.role})</span></span><span className="font-medium">{uploader.total}</span></div>)}</div>
               </div>
             ))}
           </div>
