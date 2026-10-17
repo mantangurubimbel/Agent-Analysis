@@ -10,8 +10,7 @@ export async function GET() {
     supabase.from("users").select("id, full_name").eq("role", "supervisor").order("full_name"),
     supabase.from("upload_logs").select("uploaded_at").order("uploaded_at", { ascending: false }),
   ]);
-  const current = new Date();
-  const currentMonth = `${current.getUTCFullYear()}-${String(current.getUTCMonth() + 1).padStart(2, "0")}`;
+  const currentMonth = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit" }).format(new Date());
   const periods = [...new Set((logs ?? []).map((row) => String(row.uploaded_at).slice(0, 7)).filter((period) => period < currentMonth))];
   return NextResponse.json({ supervisors: supervisors ?? [], periods });
 }

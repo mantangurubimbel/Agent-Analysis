@@ -21,12 +21,16 @@ export async function POST(request: Request) {
   const supervisorId = Number(body.supervisor_id);
   if (!period || !Number.isInteger(supervisorId)) return NextResponse.json({ error: "Periode atau supervisor tidak valid" }, { status: 400 });
   const supabase = await createClient();
+  const currentMonth = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit" }).format(new Date());
+  if (!period || period >= currentMonth) return NextResponse.json({ error: "Invoice hanya dapat diterbitkan untuk bulan yang sudah selesai" }, { status: 400 });
   const periodDate = `${period}-01`;
   const { data: settings } = await supabase.from("invoice_settings").select("*").eq("id", 1).maybeSingle();
   const { data: override } = await supabase.from("invoice_supervisor_rates").select("rate").eq("supervisor_id", supervisorId).maybeSingle();
   const rate = Number(override?.rate ?? settings?.global_rate ?? 0);
   const dueDays = Number(settings?.due_days ?? 14);
-  const due = new Date(); due.setUTCDate(due.getUTCDate() + dueDays);
+  const [periodYear, periodMonth] = period.split("-").map(Number);
+  const issuedAt = new Date(Date.UTC(periodYear, periodMonth, 1) - 7 * 60 * 60 * 1000);
+  const due = new Date(issuedAt); due.setUTCDate(due.getUTCDate() + dueDays);
   const number = `INV-${period.replace("-", "")}-S${supervisorId}-${Date.now().toString().slice(-5)}`;
   const start = new Date(`${period}-01T00:00:00+07:00`);
   const end = new Date(`${period}-01T00:00:00+07:00`); end.setUTCMonth(end.getUTCMonth() + 1);
@@ -49,7 +53,7 @@ export async function POST(request: Request) {
     if (supervisor?.id === supervisorId) counts.set(log.user_id, (counts.get(log.user_id) ?? 0) + 1);
   }
   const totalChats = [...counts.values()].reduce((sum, value) => sum + value, 0);
-  const { data: invoice, error } = await supabase.from("invoices").insert({ invoice_number: number, supervisor_id: supervisorId, period_month: periodDate, due_at: due.toISOString(), rate, total_chats: totalChats, subtotal: totalChats * rate, total: totalChats * rate }).select().single();
+  const { data: invoice, error } = await supabase.from("invoices").insert({ invoice_number: number, supervisor_id: supervisorId, period_month: periodDate, issued_at: issuedAt.toISOString(), due_at: due.toISOString(), rate, total_chats: totalChats, subtotal: totalChats * rate, total: totalChats * rate }).select().single();
   if (error) return NextResponse.json({ error: error.code === "23505" ? "Invoice periode tersebut sudah ada" : "Gagal membuat invoice" }, { status: 400 });
   if (invoice && counts.size > 0) {
     await supabase.from("invoice_items").insert([...counts.entries()].map(([uploaderId, count]) => ({ invoice_id: invoice.id, uploader_id: uploaderId, uploader_name_snapshot: userMap.get(uploaderId)?.full_name ?? "Uploader", uploader_role: userMap.get(uploaderId)?.role ?? "unknown", chat_count: count, rate, amount: count * rate })));
