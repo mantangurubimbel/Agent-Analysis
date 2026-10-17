@@ -109,7 +109,7 @@ export function UploadLimitConfig() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="default-limit">Limit per agent per hari</Label>
+            <Label htmlFor="default-limit">Limit default per hari</Label>
             <Input
               id="default-limit"
               type="number"
@@ -120,7 +120,7 @@ export function UploadLimitConfig() {
               className="max-w-[200px]"
             />
             <p className="text-xs text-[var(--text-muted)]">
-              Contoh: isi 3 → setiap agent maksimal upload 3 chat per hari.
+              Digunakan jika supervisor belum memiliki limit khusus.
             </p>
           </div>
           {supervisorLimits.length > 0 && <div className="space-y-2"><Label>Limit per supervisor</Label>{supervisorLimits.map((supervisor) => <div key={supervisor.id} className="flex items-center justify-between gap-3 text-sm"><span>{supervisor.full_name}</span><Input type="number" min={0} className="max-w-[180px]" value={supervisor.limit} onChange={(e) => setSupervisorLimits((items) => items.map((item) => item.id === supervisor.id ? { ...item, limit: Number(e.target.value || 0) } : item))} /></div>)}</div>}
