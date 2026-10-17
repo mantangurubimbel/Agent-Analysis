@@ -13,6 +13,7 @@ interface UploadLimitData {
   stats: {
     total_upload_today: number;
   };
+  supervisors?: { id: number; full_name: string; limit: number }[];
 }
 
 export function UploadLimitConfig() {
@@ -21,6 +22,7 @@ export function UploadLimitConfig() {
   const [saving, setSaving] = useState(false);
   const [enabled, setEnabled] = useState(true);
   const [defaultLimit, setDefaultLimit] = useState(1);
+  const [supervisorLimits, setSupervisorLimits] = useState<{ id: number; full_name: string; limit: number }[]>([]);
   const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
 
   useEffect(() => {
@@ -33,6 +35,7 @@ export function UploadLimitConfig() {
           setData(d);
           setEnabled(d.enabled);
           setDefaultLimit(d.default_limit);
+          setSupervisorLimits(d.supervisors ?? []);
         }
       })
       .catch((e) => setMessage({ type: "error", text: String(e) }))
@@ -46,7 +49,7 @@ export function UploadLimitConfig() {
       const res = await fetch("/api/settings/upload-limit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled, default_limit: defaultLimit }),
+        body: JSON.stringify({ enabled, default_limit: defaultLimit, supervisor_limits: supervisorLimits.map((s) => ({ supervisor_id: s.id, limit: s.limit })) }),
       });
       const d = await res.json();
       if (d.error) {
@@ -120,6 +123,7 @@ export function UploadLimitConfig() {
               Contoh: isi 3 → setiap agent maksimal upload 3 chat per hari.
             </p>
           </div>
+          {supervisorLimits.length > 0 && <div className="space-y-2"><Label>Limit per supervisor</Label>{supervisorLimits.map((supervisor) => <div key={supervisor.id} className="flex items-center justify-between gap-3 text-sm"><span>{supervisor.full_name}</span><Input type="number" min={0} className="max-w-[180px]" value={supervisor.limit} onChange={(e) => setSupervisorLimits((items) => items.map((item) => item.id === supervisor.id ? { ...item, limit: Number(e.target.value || 0) } : item))} /></div>)}</div>}
 
           <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--text-muted)] space-y-1">
             <p>ℹ️ Perubahan berlaku untuk semua agent.</p>

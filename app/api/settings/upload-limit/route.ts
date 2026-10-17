@@ -34,12 +34,16 @@ export async function GET() {
     .gte("uploaded_at", startUtc)
     .lt("uploaded_at", endUtc);
 
+  const { data: supervisors } = await supabase.from("users").select("id, full_name").eq("role", "supervisor").order("full_name");
+  const keys = (supervisors ?? []).map((s) => `upload.daily_limit.supervisor.${s.id}`);
+  const { data: overrides } = keys.length ? await supabase.from("app_settings").select("key, value").in("key", keys) : { data: [] };
   return NextResponse.json({
     enabled,
     default_limit: defaultLimit,
     stats: {
       total_upload_today: totalUpload ?? 0,
     },
+    supervisors: (supervisors ?? []).map((s) => ({ ...s, limit: Number((overrides ?? []).find((o) => o.key === `upload.daily_limit.supervisor.${s.id}`)?.value ?? defaultLimit) })),
   });
 }
 
@@ -59,6 +63,14 @@ export async function POST(request: Request) {
       key: "upload.daily_limit_enabled",
       value: body.enabled ? "true" : "false",
     });
+  }
+  if (Array.isArray(body.supervisor_limits)) {
+    for (const item of body.supervisor_limits) {
+      if (Number.isInteger(Number(item.supervisor_id)) && Number(item.limit) >= 0) {
+        const { error } = await supabase.from("app_settings").upsert({ key: `upload.daily_limit.supervisor.${Number(item.supervisor_id)}`, value: String(Number(item.limit)), value_type: "number", updated_at: new Date().toISOString(), updated_by: user.telegram_id }, { onConflict: "key" });
+        if (error) return NextResponse.json({ error: "Gagal menyimpan limit supervisor" }, { status: 500 });
+      }
+    }
   }
 
   if (typeof body.default_limit === "number" && body.default_limit >= 0) {
