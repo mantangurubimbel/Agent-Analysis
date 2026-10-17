@@ -348,3 +348,7 @@ html[data-theme="dark"] ::selection {
   border: 1px solid var(--border) !important;
   color: var(--text-primary) !important;
 }
+@media print {
+  .invoice-page { min-height: 250mm; }
+  .invoice-detail-page { page-break-before: always; }
+}
