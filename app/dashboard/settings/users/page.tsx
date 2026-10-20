@@ -38,6 +38,19 @@ export default async function ManageUsersPage() {
   }
   const limitEnabled = limitMap["upload.daily_limit_enabled"] !== "false";
   const limitDefault = parseInt(limitMap["upload.daily_limit_default"] ?? "1", 10);
+  const supervisorIds = allUsers.filter((u) => u.role === "supervisor").map((u) => u.id);
+  const { data: overrides } = supervisorIds.length ? await supabase.from("app_settings").select("key, value").in("key", supervisorIds.map((id) => `upload.daily_limit.supervisor.${id}`)) : { data: [] };
+  const overrideMap = new Map((overrides ?? []).map((row) => [row.key, Number(row.value)]));
+  const currentMonth = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit" }).format(new Date());
+  const previousMonth = (() => { const [year, month] = currentMonth.split("-").map(Number); const date = new Date(Date.UTC(year, month - 1, 1)); date.setUTCMonth(date.getUTCMonth() - 1); return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-01`; })();
+  const { data: invoices } = await supabase.from("invoices").select("supervisor_id, status").eq("period_month", previousMonth).eq("status", "paid");
+  const paidSupervisors = new Set((invoices ?? []).map((row) => row.supervisor_id));
+  const effectiveLimits: Record<number, number> = {};
+  for (const item of allUsers) {
+    const supervisor = item.role === "supervisor" ? item.id : item.role === "leader" ? item.supervisor_id : allUsers.find((leader) => leader.id === item.leader_id)?.supervisor_id;
+    const limit = supervisor ? (overrideMap.get(`upload.daily_limit.supervisor.${supervisor}`) ?? limitDefault) : limitDefault;
+    effectiveLimits[item.id] = new Date().getDate() >= 5 && supervisor && !paidSupervisors.has(supervisor) ? 0 : limit;
+  }
 
   return (
     <div className="space-y-6">
@@ -61,7 +74,7 @@ export default async function ManageUsersPage() {
         <span>💼 Agent</span>
         {limitEnabled && (
             <span className="sm:ml-auto">
-            📤 Limit upload: <strong>{limitDefault}/hari</strong> (reset 00:00 WIB)
+        📤 Limit default: <strong>{limitDefault}/hari</strong> (reset 00:00 WIB)
           </span>
         )}
       </div>
@@ -70,6 +83,7 @@ export default async function ManageUsersPage() {
         users={allUsers}
         uploadCounts={uploadCounts}
         uploadLimit={limitEnabled ? limitDefault : null}
+        effectiveLimits={effectiveLimits}
       />
     </div>
   );

@@ -28,12 +28,14 @@ interface UserTreeProps {
   users: User[];
   uploadCounts?: Record<number, number>;
   uploadLimit?: number | null;
+  effectiveLimits?: Record<number, number>;
 }
 
 export function UserTree({
   users,
   uploadCounts = {},
   uploadLimit = null,
+  effectiveLimits = {},
 }: UserTreeProps) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
@@ -56,7 +58,7 @@ export function UserTree({
 
   const isExpanded = (id: number) => expanded.has(id);
 
-  const sharedProps = { users, uploadCounts, uploadLimit };
+  const sharedProps = { users, uploadCounts, uploadLimit, effectiveLimits };
 
   return (
     <div className="space-y-6">
@@ -206,6 +208,7 @@ function LeaderNode({
   users,
   uploadCounts,
   uploadLimit,
+  effectiveLimits,
   expanded,
   toggleExpand,
 }: {
@@ -214,6 +217,7 @@ function LeaderNode({
   users: User[];
   uploadCounts: Record<number, number>;
   uploadLimit: number | null;
+  effectiveLimits: Record<number, number>;
   expanded: Set<number>;
   toggleExpand: (id: number) => void;
 }) {
@@ -226,7 +230,7 @@ function LeaderNode({
         user={leader}
         users={users}
         uploadCounts={uploadCounts}
-        uploadLimit={uploadLimit}
+        uploadLimit={effectiveLimits[leader.id] ?? uploadLimit}
         isExpanded={isExpanded}
         onToggle={() => toggleExpand(leader.id)}
       />
@@ -238,7 +242,7 @@ function LeaderNode({
               user={agent}
               users={users}
               uploadCounts={uploadCounts}
-              uploadLimit={uploadLimit}
+              uploadLimit={effectiveLimits[agent.id] ?? uploadLimit}
               isExpanded={false}
               onToggle={() => {}}
             />
